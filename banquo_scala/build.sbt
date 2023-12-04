@@ -1,6 +1,7 @@
 scalaVersion := "2.13.12"
 
 val LogbackVersion = "1.4.1"    // Note: Logback 1.4.1 requires JDK 11+.
+val postgresJdbcVersion = "42.2.18"
 
 Compile / run / fork := true
 Test / parallelExecution := false
@@ -13,7 +14,8 @@ libraryDependencies ++= Seq(
   "io.getquill"   %% "quill-zio"      % "4.7.0",
   "io.getquill"   %% "quill-jdbc-zio" % "4.7.0",
   "com.h2database" % "h2"             % "2.2.224",
-  "ch.qos.logback"  %  "logback-classic"     % LogbackVersion,
+  "org.postgresql" % "postgresql" % postgresJdbcVersion,
+  "ch.qos.logback"  %  "logback-classic"     % LogbackVersion
 )
 
 enablePlugins(JavaAppPackaging)
