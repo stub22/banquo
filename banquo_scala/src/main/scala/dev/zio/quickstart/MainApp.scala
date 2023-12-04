@@ -8,18 +8,18 @@ import zio._
 import zio.http._
 
 object MainApp extends ZIOAppDefault {
-  def run = {
-    val httpApps = GreetingApp() ++ DownloadApp() ++ CounterApp() ++ UserApp()
-    Server
-      .serve(httpApps.withDefaultErrorResponse)
-      .provide(
-        Server.defaultWithPort(8080),
+	def run = {
+		val httpApps = GreetingApp() ++ DownloadApp() ++ CounterApp() ++ UserApp()
+		Server
+			.serve(httpApps.withDefaultErrorResponse)
+			.provide(
+				Server.defaultWithPort(8484),
 
-        // An layer responsible for storing the state of the `counterApp`
-        ZLayer.fromZIO(Ref.make(0)),
+				// An layer responsible for storing the state of the `counterApp`
+				ZLayer.fromZIO(Ref.make(0)),
 
-        // To use the persistence layer, provide the `PersistentUserRepo.layer` layer instead
-        InmemoryUserRepo.layer
-      )
-  }
+				// To use the persistence layer, provide the `PersistentUserRepo.layer` layer instead
+				InmemoryUserRepo.layer
+			)
+	}
 }

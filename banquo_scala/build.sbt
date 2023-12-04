@@ -1,4 +1,10 @@
-scalaVersion := "2.13.8"
+scalaVersion := "2.13.12"
+
+val LogbackVersion = "1.4.1"    // Note: Logback 1.4.1 requires JDK 11+.
+
+Compile / run / fork := true
+Test / parallelExecution := false
+Test / logBuffered := false
 
 libraryDependencies ++= Seq(
   "dev.zio"       %% "zio"            % "2.0.19",
@@ -6,7 +12,8 @@ libraryDependencies ++= Seq(
   "dev.zio"       %% "zio-http"       % "3.0.0-RC2",
   "io.getquill"   %% "quill-zio"      % "4.7.0",
   "io.getquill"   %% "quill-jdbc-zio" % "4.7.0",
-  "com.h2database" % "h2"             % "2.2.224"
+  "com.h2database" % "h2"             % "2.2.224",
+  "ch.qos.logback"  %  "logback-classic"     % LogbackVersion,
 )
 
 enablePlugins(JavaAppPackaging)
