@@ -1,0 +1,9 @@
+version: '3.5'
+services:
+  cockroach:
+      image: cockroachdb/cockroach:latest
+      container_name: cockroach
+      ports:
+        - "26299:26257"
+        - "8099:8080"
+      command: start-single-node --insecure
