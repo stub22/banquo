@@ -4,6 +4,7 @@ import org.postgresql.ds.PGSimpleDataSource
 
 import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData, Connection => SQL_Conn}
 import java.util.UUID
+import javax.sql.DataSource
 
 object RunRoachTrial {
 	def main(args: Array[String]): Unit = {
@@ -12,22 +13,31 @@ object RunRoachTrial {
 		println("RunRoachTrial: END")
 	}
 
-	val flg_use99 = false	// For when we are outside the docker-space, looking in.
+	def runTrial() : Unit = {
+		val pgds = PGDataSources.makePGDS
+		val tp = new TrialPrelim {}
+		tp.pingDB(pgds)
+		tp.go(pgds)
+	}
+
+}
+object PGDataSources {
+	val flg_use99 = false // For when we are outside the docker-space, looking in.
 	val flg_useEnvTxtUrl = false
 	val hostName = "localhost" // localhost is the default
 	val dbPortNum = if (flg_use99) 26299 else 26257
-	val portNums : Array[Int] = Array(dbPortNum)
+	val portNums: Array[Int] = Array(dbPortNum)
 	val dbName = "defaultdb"
 	val flag_useSSL = false
 	val userName = "root"
 	val copiedDriverURL = "jdbc:postgresql://localhost:26257/defaultdb?ApplicationName=appy_RunRoachTrial_yay&ssl=false"
 
-	def runTrial() : Unit = {
+	def makePGDS : PGSimpleDataSource = {
 		val appName = "appy_RunRoachTrial_yay"
-		val jdbcEnvTxtURL : String = if (false)
+		val jdbcEnvTxtURL: String = if (false)
 			System.getenv("JDBC_DATABASE_URL")
-		else 	copiedDriverURL // 	"jdbc:postgresql://root@localhost:26257/defaultdb?ssl=false"
-		// this URL does not work - guess it wants the jdbc:  in front but some docs seemed to say for data-SOURCE...
+		else copiedDriverURL // 	"jdbc:postgresql://root@localhost:26257/defaultdb?ssl=false"
+
 
 		val pgds = new PGSimpleDataSource()
 		pgds.setApplicationName(appName);
@@ -39,12 +49,8 @@ object RunRoachTrial {
 			pgds.setUser(userName)
 			pgds.setDatabaseName(dbName)
 		}
-
-		val tp = new TrialPrelim {}
-		tp.pingDB(pgds)
-		tp.go(pgds)
+		pgds
 	}
-
 }
 
 trait TrialPrelim {
@@ -62,8 +68,14 @@ trait TrialPrelim {
 	}
 	val schema = RoachSchema
 	def go(pgds : PGSimpleDataSource) = {
-		val conn: SQL_Conn = pgds.getConnection
+		implicit val conn: SQL_Conn = pgds.getConnection
+		conn.setAutoCommit(false)
 		schema.createTablesAsNeeded(conn)
+		conn.commit()
+		val baw = new BankAccountXactWriter{}
+		val z1 = baw.makeAccount("Milton Friedman", "123 Main St, Anytown USA", BigDecimal("100.0"))
+		val z2 = baw.makeAccount("John Keynes", "456 Andover St, Liverpool UK",  BigDecimal("200.0"))
+
 		conn.close()
 	}
 }

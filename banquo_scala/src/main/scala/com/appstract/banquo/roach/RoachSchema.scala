@@ -1,6 +1,6 @@
 package com.appstract.banquo.roach
 
-import zio.Task
+import zio.{Task, UIO, ZIO}
 
 import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData, Connection => SQL_Conn}
 
@@ -10,9 +10,7 @@ object RoachSchema {
 	val CREATE_TABLE_ACCOUNT =
 		"CREATE TABLE IF NOT EXISTS account (acct_id UUID PRIMARY KEY, cust_name STRING, cust_address STRING)"
 
-
 	val CREATE_ENUM_BAL_CHG_FLAVOR = "CREATE TYPE IF NOT EXISTS bal_chg_flavor AS ENUM ('INITIAL', 'UPDATE')"
-
 
 	val COL_BCHG_ID = "bchg_id"
 	// prev_bchg_id is NULL when
@@ -59,12 +57,12 @@ trait RoachWriter {
 			: Either[DbError, BalanceChangeId] = ???
 }
 trait RoachReader {
-	def selectLastBalanceChange(acctId : AccountId) : BalanceChange = ???
+	def selectLastBalanceChange(acctId : AccountId) : Either[DbError,BalanceChange] = ???
 
 	// TODO: AllBalanceChanges should be some kind of stream or paged result.
-	def selectAllBalanceChanges(acctId : AccountId) : Iterable[BalanceChange] = ???
+	def selectAllBalanceChanges(acctId : AccountId) : Either[DbError, Iterable[BalanceChange]] = ???
 
-	def selectAccountDetails(acctId : AccountId) : AccountDetails = ???
+	def selectAccountDetails(acctId : AccountId) : Either[DbError, AccountDetails] = ???
 }
 
 // Xact stands for "transaction" in the context of a bank account (not a database).
@@ -81,8 +79,12 @@ trait BankAccountXactWriter {
 
 	}
 
-	def storeAccountXact(acctID : AccountId, changeAmt: ChangeAmount)(implicit sqlConn: SQL_Conn) : Task[BalanceChange] = {
-		val previousChange = myRoachReader.selectLastBalanceChange(acctID)
-		???
+	def storeAccountXact(acctID : AccountId, changeAmt: ChangeAmount)(implicit sqlConn: SQL_Conn) : ZIO[Any, DbError, BalanceChangeId] = {
+		val combinedResultEith: Either[DbError, BalanceChangeId] = for {
+			previousChange <- myRoachReader.selectLastBalanceChange(acctID)
+			nxtBalAmt = previousChange.balanceAmt.+(changeAmt)
+			nextChgId <- myRoachWriter.insertBalanceChange(acctID, previousChange.changeId, changeAmt, nxtBalAmt)
+		} yield(nextChgId)
+		ZIO.fromEither(combinedResultEith)
 	}
 }
