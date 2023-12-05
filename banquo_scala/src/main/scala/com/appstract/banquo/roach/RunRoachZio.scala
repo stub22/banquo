@@ -10,45 +10,28 @@ object RunRoachZio extends ZIOAppDefault {
 
 		val zioThatNeedsDbConn: ZIO[DbConn, Nothing, Unit] = ZIO.serviceWith[DbConn](dbc => {
 			doThingWithConn(dbc)
-		})
+		}).debug("zioThatNeedsDbConn debug")
+
+		val sqlExec = new SqlExecutor
+		val zzz = sqlExec
 
 		val appToRun = zioThatNeedsDbConn.provideLayer(DbConnLayers.dbcLayer01)
-		appToRun
+		appToRun.debug("appToRun debug")
+	}
+
+	val myDirectSqlExec = new DirectSqlExecutor
+	def doThingWithConn(dbc : DbConn) = {
+		val sqlConn = dbc.sqlConn
+		myDirectSqlExec.runSome("DROP TABLE dummy_dumdum")(dbc.sqlConn)
 	}
 
 	val mySqlExec = new SqlExecutor
-	def doThingWithConn(dbc : DbConn) = {
-		val sqlConn = dbc.sqlConn
-		mySqlExec.runSome("DROP TABLE dummy_dumdum")(dbc.sqlConn)
-	}
-}
-case class DbConn(sqlConn: SQL_Conn)
-object DbConnLayers {
-	val myConnOps = new ConnOps {}
-	val dbcLayer01 = ZLayer.scoped(myConnOps.scopedConn(PGDataSources.makePGDS))
+
+
 }
 
-trait ConnOps {
-	def openConn(dsrc: => DataSource) : ZIO[Any, Throwable, DbConn] = {
-		ZIO.attemptBlocking {
-			val conn = dsrc.getConnection
-			conn.setAutoCommit(false)
-			DbConn(conn)
-		}.debug(".openConn")
-	}
-	def closeConn(dbConn : DbConn) : ZIO[Any, Throwable, Unit] = {
-		ZIO.attemptBlocking {
-			dbConn.sqlConn.close()
-		}.debug(".closeConn")
-	}
-	def closeAndLogErrors(dbConn : DbConn) : ZIO[Any, Nothing, Unit] = {
-		val closeEff = closeConn(dbConn)
-		closeEff.orElse(ZIO.logError("Problem closing dbConn"))
-	}
-	def scopedConn(dsrc: => DataSource): ZIO[Scope, Throwable, DbConn] = {
-		ZIO.acquireRelease (openConn(dsrc)) (closeAndLogErrors(_))
-	}
-}
+
+
 /**
  * https://jdbc.postgresql.org/documentation/datasource/
  *

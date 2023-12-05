@@ -19,7 +19,7 @@ object RoachSchema {
 		"""CREATE TABLE IF NOT EXISTS balance_change (bchg_id INT DEFAULT unique_rowid(), acct_id UUID,
 				chg_flavor bal_chg_flavor, prev_bchg_id INT, chg_amt DECIMAL, balance DECIMAL) """
 
-	val mySqlExec = new SqlExecutor
+	val mySqlExec = new DirectSqlExecutor
 
 	def createTablesAsNeeded(implicit sqlConn: SQL_Conn): Unit = {
 		mySqlExec.runSome(CREATE_TABLE_ACCOUNT)
@@ -43,7 +43,7 @@ case class BalanceChange(changeId : BalanceChangeId, acctID : AccountId, prevCha
 
 trait RoachWriter {
 	val mySchema = RoachSchema
-	val mySqlExec = new SqlExecutor
+	val mySqlExec = new DirectSqlExecutor
 
 	val INSERT_ACCT = "INSERT INTO account (cust_name, cust_address) VALUES (?, ?) RETURNING acct_id"
 	def insertAccount(customerName : String, customerAddress : String)(implicit sqlConn: SQL_Conn): Either[DbError, AccountId] = {
