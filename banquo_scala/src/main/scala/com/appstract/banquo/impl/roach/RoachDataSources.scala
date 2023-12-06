@@ -1,4 +1,4 @@
-package com.appstract.banquo.roach
+package com.appstract.banquo.impl.roach
 
 import org.postgresql.ds.PGSimpleDataSource
 
@@ -9,7 +9,7 @@ import org.postgresql.ds.PGSimpleDataSource
  * org.postgresql.ds.PGPoolingDataSource - basic pooling, has limits and flaws as discussed in doc
  */
 
-object PGDataSources {
+object RoachDataSources {
 	val flg_use99 = false // For when we are outside the docker-space, looking in.
 	val flg_useEnvTxtUrl = false
 	val hostName_UNUSED = "localhost" // localhost is the default used by PGSimpleDataSource.

@@ -1,16 +1,20 @@
-package com.appstract.banquo.bank
+package com.appstract.banquo.impl.bank
 
+import com.appstract.banquo.api.{BankAccountWriteOps, DbConn}
 import zio.ZIO
-import com.appstract.banquo.model.BankScalarTypes.{AccountId, BalanceAmount, BalanceChangeId, ChangeAmount}
-import com.appstract.banquo.roach.{DbConn, DbError, RoachReader, RoachWriter}
+import com.appstract.banquo.api.BankScalarTypes.{AccountId, BalanceAmount, BalanceChangeId, ChangeAmount}
+import com.appstract.banquo.impl.roach.{DbError, RoachReader, RoachWriter}
 
 
 // Xact stands for "transaction" in the context of a bank account (not a database).
-trait BankAccountWriteOps {
+class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 	val myRoachWriter = new RoachWriter {}
 	val myRoachReader = new RoachReader {}
 
-	def makeAccount(customerName: String, customerAddress: String, initBal: BalanceAmount):
+	/*
+	Does NOT auto-commit!
+	 */
+	override def makeAccount(customerName: String, customerAddress: String, initBal: BalanceAmount):
 					ZIO[DbConn, Throwable, (AccountId, BalanceChangeId)] = {
 		// Must insert the Account record AND create an initial balance record.
 		for {

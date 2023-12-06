@@ -1,7 +1,7 @@
-package com.appstract.banquo.roach
+package com.appstract.banquo.impl.roach
 
-import com.appstract.banquo.model.BankScalarTypes.{AccountId, BalanceAmount, BalanceChangeId, ChangeAmount}
-
+import com.appstract.banquo.api.BankScalarTypes.{AccountId, BalanceAmount, BalanceChangeId, ChangeAmount}
+import com.appstract.banquo.api.DbConn
 import zio.ZIO
 
 

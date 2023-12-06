@@ -1,20 +1,23 @@
-package com.appstract.banquo.roach
+package com.appstract.banquo.impl.roach
 
+import com.appstract.banquo.api.DbConn
 import org.postgresql.ds.common.BaseDataSource
 import zio.{Scope, ZIO, ZLayer}
 
 import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData, Connection => SQL_Conn}
 import javax.sql.DataSource
 
-case class DbConn(sqlConn: SQL_Conn)
+private class RoachDbConnImpl(sqlConn: SQL_Conn) extends DbConn {
+	override def getSqlConn: SQL_Conn = sqlConn
+}
 
-trait DbConnOps {
+trait RoachDbConnOps {
 	def openConn(dsrc: => DataSource) : ZIO[Any, Throwable, DbConn] = {
 		ZIO.attemptBlocking {
 			val dsinfo = describeDataSource(dsrc)
 			val conn = dsrc.getConnection
 			conn.setAutoCommit(false)
-			val dbc = DbConn(conn)
+			val dbc = new RoachDbConnImpl(conn)
 			(dbc, dsinfo)
 		}.debug(".openConn").tap(pair => {
 			ZIO.log(s"Opened DataSource with info: ${pair._2}")
@@ -22,7 +25,7 @@ trait DbConnOps {
 	}
 	def closeConn(dbConn : DbConn) : ZIO[Any, Throwable, Unit] = {
 		ZIO.attemptBlocking {
-			dbConn.sqlConn.close()
+			dbConn.getSqlConn.close()
 		}.debug(".closeConn")
 	}
 	def closeAndLogErrors(dbConn : DbConn) : ZIO[Any, Nothing, Unit] = {
@@ -41,7 +44,7 @@ trait DbConnOps {
 	}
 }
 
-object DbConnLayers {
-	val myConnOps = new DbConnOps {}
-	val dbcLayer01 = ZLayer.scoped(myConnOps.scopedConn(PGDataSources.makePGDS))
+object RoachDbConnLayers {
+	val myConnOps = new RoachDbConnOps {}
+	val dbcLayer01 = ZLayer.scoped(myConnOps.scopedConn(RoachDataSources.makePGDS))
 }

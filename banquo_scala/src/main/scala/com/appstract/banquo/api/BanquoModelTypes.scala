@@ -1,4 +1,4 @@
-package com.appstract.banquo.model
+package com.appstract.banquo.api
 
 private trait BanquoModelTypes
 
@@ -11,7 +11,7 @@ object BankScalarTypes {
 	type BalanceAmount = BigDecimal
 }
 
-import BankScalarTypes._
+import com.appstract.banquo.api.BankScalarTypes._
 
 case class AccountDetails(acctID : AccountId, customerName: CustomerName, customerAddress: CustomerAddress)
 

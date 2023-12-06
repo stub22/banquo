@@ -1,10 +1,10 @@
-package com.appstract.banquo.roach
+package com.appstract.banquo.main
 
+import com.appstract.banquo.impl.roach.{RoachDataSources, RoachSchema}
 import org.postgresql.ds.PGSimpleDataSource
 
-import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData, Connection => SQL_Conn}
+import java.sql.{Connection => SQL_Conn}
 import java.util.UUID
-import javax.sql.DataSource
 
 object RunRoachTrial {
 	def main(args: Array[String]): Unit = {
@@ -14,7 +14,7 @@ object RunRoachTrial {
 	}
 
 	def runTrial() : Unit = {
-		val pgds = PGDataSources.makePGDS
+		val pgds = RoachDataSources.makePGDS
 		val tp = new TrialPrelim {}
 		tp.pingDB(pgds)
 		// tp.go(pgds)

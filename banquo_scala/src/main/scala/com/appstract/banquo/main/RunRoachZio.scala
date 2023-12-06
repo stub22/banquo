@@ -1,7 +1,9 @@
-package com.appstract.banquo.roach
+package com.appstract.banquo.main
 
-import com.appstract.banquo.bank.BankAccountWriteOps
-import zio.{Scope, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer}
+import com.appstract.banquo.api.DbConn
+import com.appstract.banquo.impl.bank.BankAccountWriteOpsImpl
+import com.appstract.banquo.impl.roach.{RoachDbConnLayers, RoachSchema, RoachWriter, SqlExecutor}
+import zio.{Scope, ZIO, ZIOAppArgs, ZIOAppDefault}
 
 object RunRoachZio extends ZIOAppDefault {
 	override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
@@ -17,7 +19,7 @@ object RunRoachZio extends ZIOAppDefault {
 		val dummyName = "dummy_" + ts
 		val dummyInsertOp = rw.insertAccount(dummyName, dummyName)
 
-		val bawo = new BankAccountWriteOps {}
+		val bawo = new BankAccountWriteOpsImpl {}
 		val makeDummyAccountOp = bawo.makeAccount(dummyName, dummyName, BigDecimal("72.50")).debug(".run makeDummyAccountOp")
 
 		val commitOp = mySqlExec.execCommit().debug(".run commit after makeDummyAccount")
@@ -25,7 +27,7 @@ object RunRoachZio extends ZIOAppDefault {
 		//	val z2 = baw.makeAccount("John Keynes", "456 Andover St, Liverpool UK",  BigDecimal("200.0"))
 		val comboOp = tableCreateOp *> makeDummyAccountOp *> commitOp//  dummyDbOp *> tableCreateOp
 
-		val appToRun = comboOp.provideLayer(DbConnLayers.dbcLayer01)
+		val appToRun = comboOp.provideLayer(RoachDbConnLayers.dbcLayer01)
 		appToRun.debug(".appToRun")
 	}
 
@@ -40,7 +42,7 @@ object RunRoachZio extends ZIOAppDefault {
 	}
 
 	private def doFakeOpWithConn(dbc: DbConn) = {
-		val sqlConn = dbc.sqlConn
+		val sqlConn = dbc.getSqlConn
 		mySqlExec.execUpdateNoResult("DROP TABLE dummy_dumdum")
 	}
 
