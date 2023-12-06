@@ -5,7 +5,7 @@ import com.appstract.banquo.impl.bank.BankAccountWriteOpsImpl
 import com.appstract.banquo.impl.roach.{RoachDbConnLayers, RoachSchema, RoachWriter, SqlExecutor}
 import zio.{Scope, ZIO, ZIOAppArgs, ZIOAppDefault}
 
-object RunRoachZio extends ZIOAppDefault {
+object RunRoachTests extends ZIOAppDefault {
 	override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
 
 		val dummyDbOp = ZIO.serviceWithZIO[DbConn](dbc => {

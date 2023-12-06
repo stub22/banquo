@@ -3,6 +3,7 @@ scalaVersion := "2.13.12"
 val LogbackVersion = "1.4.1"    // Note: Logback 1.4.1 requires JDK 11+.
 val postgresJdbcVersion = "42.2.18"
 
+Compile / mainClass := Some("com.appstract.banquo.main.RunBanquoHttpApp")
 Compile / run / fork := true
 Test / parallelExecution := false
 Test / logBuffered := false
