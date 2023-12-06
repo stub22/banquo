@@ -13,18 +13,29 @@ object RoachSchema {
 	val CREATE_ENUM_BAL_CHG_FLAVOR = "CREATE TYPE IF NOT EXISTS bal_chg_flavor AS ENUM ('INITIAL', 'UPDATE')"
 
 	val COL_BCHG_ID = "bchg_id"
-	// prev_bchg_id is NULL when
+	// prev_bchg_id should be NULL when bal_chg_flavor is INITIAL.
+	// UNIQUE constraint on prev_bchg_id should prevent forking by simultaneous transactions on the same account.
+	// (We expect one of the transactions to fail.
+	// This failure should actually happen even without the UNIQUE constraint, assuming Cockroach SERIALIZABLE fails on
+	// phantom reads).
 	val COL_PREV_BCHG_ID = "prev_bchg_id"
 	val CREATE_TABLE_BALANCE_CHG =
-		"""CREATE TABLE IF NOT EXISTS balance_change (bchg_id INT DEFAULT unique_rowid(), acct_id UUID,
-				chg_flavor bal_chg_flavor, prev_bchg_id INT, chg_amt DECIMAL, balance DECIMAL) """
+		"""CREATE TABLE IF NOT EXISTS balance_change (
+	 			bchg_id INT PRIMARY KEY DEFAULT unique_rowid(),
+	 			acct_id UUID,
+				chg_flavor bal_chg_flavor,
+				prev_bchg_id INT UNIQUE,
+				chg_amt DECIMAL,
+				balance DECIMAL) """
 
-	val mySqlExec = new DirectSqlExecutor
 
-	def createTablesAsNeeded(implicit sqlConn: SQL_Conn): Unit = {
-		mySqlExec.runSome(CREATE_TABLE_ACCOUNT)
-		mySqlExec.runSome(CREATE_ENUM_BAL_CHG_FLAVOR)
-		mySqlExec.runSome(CREATE_TABLE_BALANCE_CHG)
+	val mySqlExec = new SqlExecutor
+
+	def createTablesAsNeeded = {
+		val z1 = mySqlExec.execUpdateNoResult(CREATE_TABLE_ACCOUNT).debug("CREATE_TABLE_ACCOUNT")
+		val z2 = mySqlExec.execUpdateNoResult(CREATE_ENUM_BAL_CHG_FLAVOR).debug("CREATE_ENUM_BAL_CHG_FLAVOR")
+		val z3 = mySqlExec.execUpdateNoResult(CREATE_TABLE_BALANCE_CHG).debug("CREATE_TABLE_BALANCE_CHG")
+		(z1 *> z2 *> z3).unit
 	}
 }
 

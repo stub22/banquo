@@ -17,7 +17,7 @@ object RunRoachTrial {
 		val pgds = PGDataSources.makePGDS
 		val tp = new TrialPrelim {}
 		tp.pingDB(pgds)
-		tp.go(pgds)
+		// tp.go(pgds)
 	}
 
 }
@@ -40,8 +40,8 @@ trait TrialPrelim {
 	def go(pgds : PGSimpleDataSource) = {
 		implicit val conn: SQL_Conn = pgds.getConnection
 		conn.setAutoCommit(false)
-		schema.createTablesAsNeeded(conn)
-		conn.commit()
+		// schema.createTablesAsNeeded(conn)
+		// conn.commit()
 		val baw = new BankAccountXactWriter{}
 		val z1 = baw.makeAccount("Milton Friedman", "123 Main St, Anytown USA", BigDecimal("100.0"))
 		val z2 = baw.makeAccount("John Keynes", "456 Andover St, Liverpool UK",  BigDecimal("200.0"))

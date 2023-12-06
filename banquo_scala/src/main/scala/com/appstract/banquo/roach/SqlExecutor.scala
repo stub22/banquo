@@ -40,6 +40,11 @@ class SqlExecutor {
 			updateCount
 		})
 	}
+	def execCommit(): ZIO[DbConn, Throwable, Unit] = {
+		ZIO.serviceWith[DbConn](dbc => {
+			dbc.sqlConn.commit()
+		})
+	}
 }
 
 trait ResultExtractor {

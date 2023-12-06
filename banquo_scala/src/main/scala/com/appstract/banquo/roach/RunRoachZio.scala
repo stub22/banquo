@@ -8,14 +8,15 @@ import javax.sql.DataSource
 object RunRoachZio extends ZIOAppDefault {
 	override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
 
-		val zioThatNeedsDbConn: ZIO[DbConn, Nothing, Unit] = ZIO.serviceWith[DbConn](dbc => {
+		val dummyDbOp: ZIO[DbConn, Nothing, Unit] = ZIO.serviceWith[DbConn](dbc => {
 			doThingWithConn(dbc)
 		}).debug("zioThatNeedsDbConn debug")
 
-		val sqlExec = new SqlExecutor
-		val zzz = sqlExec
+		val tableCreateOp = setup.debug("schema setup")
 
-		val appToRun = zioThatNeedsDbConn.provideLayer(DbConnLayers.dbcLayer01)
+		val comboOp = tableCreateOp //  dummyDbOp *> tableCreateOp
+
+		val appToRun = comboOp.provideLayer(DbConnLayers.dbcLayer01)
 		appToRun.debug("appToRun debug")
 	}
 
@@ -26,7 +27,13 @@ object RunRoachZio extends ZIOAppDefault {
 	}
 
 	val mySqlExec = new SqlExecutor
-
+	val schema = RoachSchema
+	def setup = {
+		val schemaCreate = schema.createTablesAsNeeded
+		// Empiricially, it seems a commit is required for Couchbase to absorb DDL statements.
+		val comm = mySqlExec.execCommit.debug(".execCommit")
+		schemaCreate *> comm
+	}
 
 }
 
