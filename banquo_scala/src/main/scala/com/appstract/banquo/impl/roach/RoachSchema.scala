@@ -9,9 +9,11 @@ object RoachSchema {
 	val COL_ACCT_ID = "acct_id"
 	val CREATE_TABLE_ACCOUNT =
 		"""CREATE TABLE IF NOT EXISTS account (
-		 acct_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-		 cust_name STRING,
-		 cust_address STRING)""".stripMargin
+			acct_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			cust_name STRING,
+		 	cust_address STRING,
+   			acct_create_time TIMESTAMPTZ DEFAULT NOW()
+		 )""".stripMargin
 
 	val CREATE_ENUM_BAL_CHG_FLAVOR = "CREATE TYPE IF NOT EXISTS bal_chg_flavor AS ENUM ('INITIAL', 'FLOW')"
 
@@ -33,7 +35,8 @@ object RoachSchema {
 				chg_flavor bal_chg_flavor,
 				prev_bchg_id INT8 UNIQUE,
 				chg_amt DECIMAL,
-				balance DECIMAL) """.stripMargin
+				balance DECIMAL,
+				chg_create_time TIMESTAMPTZ DEFAULT NOW()) """.stripMargin
 
 
 	val mySqlExec = new SqlExecutor
