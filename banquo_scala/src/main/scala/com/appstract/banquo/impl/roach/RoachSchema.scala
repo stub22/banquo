@@ -45,10 +45,3 @@ object RoachSchema {
 		(z1 *> z2 *> z3).unit
 	}
 }
-
-
-
-
-trait BankAccountReadOps {
-	val myRoachReader = new RoachReader {}
-}

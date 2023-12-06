@@ -6,8 +6,6 @@ import zio.{Task, ZIO}
 import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData}
 import scala.collection.mutable.ArrayBuffer
 
-case class DbError(info : String)
-
 class SqlExecutor {
 	/***
 	 * Uses mutable data features of the PreparedStatement and ResultSet.

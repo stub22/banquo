@@ -1,14 +1,19 @@
 package com.appstract.banquo.impl.roach
 
-import com.appstract.banquo.api.{AccountDetails, BalanceChange}
+import com.appstract.banquo.api.{AccountDetails, BalanceChange, DbConn}
 import com.appstract.banquo.api.BankScalarTypes.AccountId
+import com.appstract.banquo.api.DbResultTypes.DbResult
+import zio.URIO
+
+
 
 trait RoachReader {
-	def selectLastBalanceChange(acctId : AccountId) : Either[DbError,BalanceChange] = ???
 
-	// TODO: AllBalanceChanges should be some kind of stream or paged result.
-	def selectAllBalanceChanges(acctId : AccountId) : Either[DbError, Iterable[BalanceChange]] = ???
+	def selectLastBalanceChange(acctId : AccountId) : URIO[DbConn, DbResult[BalanceChange]] = ???
 
-	def selectAccountDetails(acctId : AccountId) : Either[DbError, AccountDetails] = ???
+	// TODO: AllBalanceChanges should be some kind of paged result set, or stream
+	def selectAllBalanceChanges(acctId : AccountId) : URIO[DbConn, DbResult[Iterable[BalanceChange]]] = ???
+
+	def selectAccountDetails(acctId : AccountId) : URIO[DbConn, DbResult[AccountDetails]] = ???
 }
 
