@@ -1,49 +1,52 @@
 package com.appstract.banquo.roach
 
+import com.appstract.banquo.bank.BankAccountWriteOps
 import zio.{Scope, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer}
-
-import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData, Connection => SQL_Conn}
-import javax.sql.DataSource
 
 object RunRoachZio extends ZIOAppDefault {
 	override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
 
-		val dummyDbOp: ZIO[DbConn, Nothing, Unit] = ZIO.serviceWith[DbConn](dbc => {
-			doThingWithConn(dbc)
+		val dummyDbOp = ZIO.serviceWithZIO[DbConn](dbc => {
+			doFakeOpWithConn(dbc)
 		}).debug("zioThatNeedsDbConn debug")
 
 		val tableCreateOp = setup.debug("schema setup")
 
-		val comboOp = tableCreateOp //  dummyDbOp *> tableCreateOp
+		val rw = new RoachWriter {}
+		val ts = System.currentTimeMillis()
+		val dummyName = "dummy_" + ts
+		val dummyInsertOp = rw.insertAccount(dummyName, dummyName)
+
+		val bawo = new BankAccountWriteOps {}
+		val makeDummyAccountOp = bawo.makeAccount(dummyName, dummyName, BigDecimal("72.50")).debug(".run makeDummyAccountOp")
+
+		val commitOp = mySqlExec.execCommit().debug(".run commit after makeDummyAccount")
+		// val z1 = baw.makeAccount("Milton Friedman", "123 Main St, Anytown USA", BigDecimal("100.0"))
+		//	val z2 = baw.makeAccount("John Keynes", "456 Andover St, Liverpool UK",  BigDecimal("200.0"))
+		val comboOp = tableCreateOp *> makeDummyAccountOp *> commitOp//  dummyDbOp *> tableCreateOp
 
 		val appToRun = comboOp.provideLayer(DbConnLayers.dbcLayer01)
-		appToRun.debug("appToRun debug")
+		appToRun.debug(".appToRun")
 	}
 
-	val myDirectSqlExec = new DirectSqlExecutor
-	def doThingWithConn(dbc : DbConn) = {
-		val sqlConn = dbc.sqlConn
-		myDirectSqlExec.runSome("DROP TABLE dummy_dumdum")(dbc.sqlConn)
-	}
 
 	val mySqlExec = new SqlExecutor
 	val schema = RoachSchema
 	def setup = {
 		val schemaCreate = schema.createTablesAsNeeded
 		// Empiricially, it seems a commit is required for Couchbase to absorb DDL statements.
-		val comm = mySqlExec.execCommit.debug(".execCommit")
+		val comm = mySqlExec.execCommit.debug(".execCommit (after createTablesAsNeeded)")
 		schemaCreate *> comm
+	}
+
+	private def doFakeOpWithConn(dbc: DbConn) = {
+		val sqlConn = dbc.sqlConn
+		mySqlExec.execUpdateNoResult("DROP TABLE dummy_dumdum")
 	}
 
 }
 
 
 
-/**
- * https://jdbc.postgresql.org/documentation/datasource/
- *
- * org.postgresql.ds.PGSimpleDataSource   - no connection pooling
- * org.postgresql.ds.PGPoolingDataSource - basic pooling, has limits and flaws as discussed in doc
- */
 
 

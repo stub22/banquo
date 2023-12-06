@@ -42,9 +42,7 @@ trait TrialPrelim {
 		conn.setAutoCommit(false)
 		// schema.createTablesAsNeeded(conn)
 		// conn.commit()
-		val baw = new BankAccountXactWriter{}
-		val z1 = baw.makeAccount("Milton Friedman", "123 Main St, Anytown USA", BigDecimal("100.0"))
-		val z2 = baw.makeAccount("John Keynes", "456 Andover St, Liverpool UK",  BigDecimal("200.0"))
+		// val baw = new BankAccountWriteOps{}
 
 		conn.close()
 	}

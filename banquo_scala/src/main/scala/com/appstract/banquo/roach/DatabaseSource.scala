@@ -2,10 +2,17 @@ package com.appstract.banquo.roach
 
 import org.postgresql.ds.PGSimpleDataSource
 
+/**
+ * https://jdbc.postgresql.org/documentation/datasource/
+ *
+ * org.postgresql.ds.PGSimpleDataSource   - no connection pooling
+ * org.postgresql.ds.PGPoolingDataSource - basic pooling, has limits and flaws as discussed in doc
+ */
+
 object PGDataSources {
 	val flg_use99 = false // For when we are outside the docker-space, looking in.
 	val flg_useEnvTxtUrl = false
-	val hostName = "localhost" // localhost is the default
+	val hostName_UNUSED = "localhost" // localhost is the default used by PGSimpleDataSource.
 	val dbPortNum = if (flg_use99) 26299 else 26257
 	val portNums: Array[Int] = Array(dbPortNum)
 	val dbName = "defaultdb"
@@ -18,7 +25,6 @@ object PGDataSources {
 		val jdbcEnvTxtURL: String = if (false)
 			System.getenv("JDBC_DATABASE_URL")
 		else copiedDriverURL // 	"jdbc:postgresql://root@localhost:26257/defaultdb?ssl=false"
-
 
 		val pgds = new PGSimpleDataSource()
 		pgds.setApplicationName(appName);
