@@ -22,9 +22,6 @@ trait RoachReader {
 		val stmtParams = Seq[Any](acctID)
 		val sqlJob: URIO[DbConn, DbOpResult[AccountDetails]] =
 				mySqlJobMaker.execSqlAndPullOneRow(SELECT_ACCT_DETAILS, stmtParams, grabAccountDetails)
-
-		// Redundant sanity check - make sure the acctID matches!
-		// 	val jobWithSanityCheck = sqlJob.map(acctDetails => {assert(acctDetails.accountID == acctID); acctDetails})
 		sqlJob
 	}
 
@@ -68,7 +65,7 @@ node executing the insert. Such time-ordered values are likely to be globally un
 large number of IDs (100,000+) are generated per node per second. Also, there can be gaps and the order is not
 completely guaranteed."
 	*/
-	val SELECT_ALL_BAL_CHGS = "SELECT bchg_id, acct_id, chg_flavor, prev_bchg_id, chg_amt, balance, chg_create_time " +
+	val SELECT_ALL_BAL_CHGS = "SELECT bchg_id, acct_id, chg_flavor, prev_bchg_id, chg_amt, balance, chg_create_time, description " +
 			"FROM balance_change WHERE acct_id = ? ORDER BY bchg_id DESC LIMIT ?"
 	def selectRecentBalanceChanges(acctID : AccountID, maxRecordCount : Int) : URIO[DbConn, DbOpResult[Seq[BalanceChangeDetails]]] = {
 		val OP_NAME = "selectRecentBalanceChanges"
@@ -93,7 +90,8 @@ completely guaranteed."
 		val changeAmt = rs.getBigDecimal(5)
 		val balanceAmt = rs.getBigDecimal(6)
 		val createStamp = rs.getTimestamp(7)
-		BalanceChangeDetails(bchgID, acctID, changeFlavor, prevBchgID_opt, changeAmt, balanceAmt, createStamp)
+		val xactDesc = rs.getString(8)
+		BalanceChangeDetails(bchgID, acctID, changeFlavor, prevBchgID_opt, changeAmt, balanceAmt, createStamp, xactDesc)
 	}
 
 }

@@ -1,8 +1,9 @@
 package com.appstract.banquo.impl.roach
 
 import zio.{URIO, ZIO}
+
 import java.sql.{ResultSet => JdbcResultSet}
-import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, BalanceChangeID, ChangeAmount, DbTimestamp}
+import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, BalanceChangeID, ChangeAmount, DbTimestamp, XactDescription}
 import com.appstract.banquo.api.bank.BalanceChangeSummary
 import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
 import com.appstract.banquo.api.roach.DbConn
@@ -25,24 +26,24 @@ trait RoachWriter {
 	}
 
 	val INSERT_INIT_BAL =
-		"INSERT INTO balance_change (acct_id, chg_flavor, chg_amt, balance) " +
-				"VALUES (?, ?, ?, ?) RETURNING bchg_id"
+		"INSERT INTO balance_change (acct_id, chg_flavor, chg_amt, balance, description) " +
+				"VALUES (?, ?, ?, ?, ?) RETURNING bchg_id"
 
 	def insertInitialBalance(acctID: AccountID, initAmt: BalanceAmount): URIO[DbConn, DbOpResult[BalanceChangeID]] = {
-		val stmtParams = Seq[Any](acctID, mySchema.BCHG_FLAVOR_INITIAL, initAmt, initAmt)
+		val stmtParams = Seq[Any](acctID, mySchema.BCHG_FLAVOR_INITIAL, initAmt, initAmt, "INITIAL ACCOUNT BALANCE")
 		val sqlJob = mySqlExec.execSqlAndPullOneLong(INSERT_INIT_BAL, stmtParams)
 		sqlJob.debug(".insertInitialBalance result")
 	}
 
 	val INSERT_BAL_CHG =
-		"INSERT INTO balance_change (acct_id, chg_flavor, prev_bchg_id, chg_amt, balance) " +
-				"VALUES (?, ?, ?, ?, ?) RETURNING bchg_id, chg_create_time"
+		"INSERT INTO balance_change (acct_id, chg_flavor, prev_bchg_id, chg_amt, balance, description) " +
+				"VALUES (?, ?, ?, ?, ?, ?) RETURNING bchg_id, chg_create_time"
 
-	def insertBalanceChange(acctID: AccountID, prevChgID: BalanceChangeID, chgAmt: ChangeAmount, balAmt: BalanceAmount):
-			URIO[DbConn, DbOpResult[BalanceChangeSummary]] = {
-		val stmtParams = Seq[Any](acctID, mySchema.BCHG_FLAVOR_FLOW, prevChgID, chgAmt, balAmt)
+	def insertBalanceChange(acctID: AccountID, prevChgID: BalanceChangeID, chgAmt: ChangeAmount, balAmt: BalanceAmount,
+							xactDesc : XactDescription): URIO[DbConn, DbOpResult[BalanceChangeSummary]] = {
+		val stmtParams = Seq[Any](acctID, mySchema.BCHG_FLAVOR_FLOW, prevChgID, chgAmt, balAmt, xactDesc)
 		val sqlJob = mySqlExec.execSqlAndPullOneRow(INSERT_BAL_CHG, stmtParams, grabBalChangeResult)
-		val resultJob = sqlJob.map(_.map(rsltPair => BalanceChangeSummary(acctID, chgAmt, balAmt, rsltPair._2.toString)))
+		val resultJob = sqlJob.map(_.map(rsltPair => BalanceChangeSummary(acctID, chgAmt, balAmt, rsltPair._2.toString, Option(xactDesc))))
 		resultJob.debug(".insertBalanceChange result")
 	}
 

@@ -41,9 +41,6 @@ object RunRoachTests extends ZIOAppDefault {
 	 */
 	def mkDummyAccounts(numAccts : Int): ZIO[DbConn, Nothing, Vector[AcctOpResult[AccountID]]] = {
 		val dummyAccountJobNeedsDbc = mkDummyAccountOp
-		// This would create the accounts, but it does not collect the results for us.
-		// val repeatedJobUsesOneDbc: ZIO[DbConn, Nothing, AcctOpResult[AccountID]] = dummyAccountJobNeedsDbc.repeatN(numAccts)
-		val strmOne: ZStream[DbConn, Nothing, AcctOpResult[AccountID]] = ZStream.fromZIO(dummyAccountJobNeedsDbc)
 		val strmMany: ZStream[DbConn, Nothing, AcctOpResult[AccountID]] = ZStream.repeatZIO(dummyAccountJobNeedsDbc)
 		val strmN: ZStream[DbConn, Nothing, AcctOpResult[AccountID]] = strmMany.take(numAccts)
 		val outN = strmN.runFold(Vector[AcctOpResult[AccountID]]())((prevVec, nxtRslt) => prevVec :+ nxtRslt)
