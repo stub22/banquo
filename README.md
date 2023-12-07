@@ -4,16 +4,16 @@ Banquo is a prototype implementation of a bank account ledger service with the p
 
 The design relies on the scalable strong consistency features of Cockroach DB, which is protocol compatible with Postgresql.  
 
-The Banquo HTTP service is implemented in Functional Scala (v. 2.13) using the following libraries:
+The Banquo HTTP service is implemented in Functional Scala (v. 2.13) using the following main libraries:
   * ZIO 2.x
   * ZIO-HTTP
   * Postgres JDBC driver
 
-Banquo is designed to be run as a set of parallel stateless service instances, deployed and managed by  Kubernetes.  As of 2023-12-06, Banquo has been tested using only a single service instance launched in a Docker Compose setup, using a single-server instance of the free edition of Cockroach DB version ____.
+Banquo is designed to be run as a set of parallel stateless service instances, deployed and managed by  Kubernetes.  As of 2023-12-06, Banquo has been tested using only a single service instance, using a single-server instance of the free desktop edition of CockroachDB core version 23.1.12.
 
-Cockroach DB may be deployed as a scalable, distributed database under Kubernetes (commercial license required), and is also offered as a commercial cloud-hosted service.
+CockroachDB may be deployed as a scalable, distributed database under Kubernetes (commercial license required), and is also offered as a commercial cloud-hosted service.
 
-### Persistent Store Design Overview
+### Persistent Store Design 
 
 The core functionality of Banquo is implemented by the SQL table called `balance_change`.
 
@@ -22,9 +22,7 @@ This table functions like an append-only log, and in principle could be replaced
   * The current Banquo implementation never mutates any rows of the `balance_change` table.
   * Our Scala code accesses the JDBC driver directly, which ensures we have complete control over both DB connections and SQL Transactions.
 
-
-
-#### Schema and concurrency design of the `balance_change` table
+#### Schema and Concurrency Design of the `balance_change` table
 
 The column schema is as follows.  
 Notice that bchg_id is automatically generated as a mostly-increasing integer.
@@ -38,6 +36,7 @@ Notice that bchg_id is automatically generated as a mostly-increasing integer.
   prev_bchg_id    | INT8                            |      t      | NULL           |
   chg_amt         | DECIMAL                         |      f      | NULL           |
   balance         | DECIMAL                         |      f      | NULL           |
+  description     | STRING                          |      t      | NULL           |
   chg_create_time | TIMESTAMPTZ                     |      f      | now()          |
 ```
 
@@ -52,13 +51,15 @@ The table has the following constraints
 With the above schema in mind, the essence of the Banquo design is illustrated by this Scala method signature, which is used to store all account balance changes (excluding the initial balance for an account).
 	
 ```
-def insertBalanceChange(acctId: AccountId, prevChgId: BalanceChangeId, chgAmt: ChangeAmount, balAmt: BalanceAmount): ZIO[DbConn, Throwable, BalanceChangeId]
+def insertBalanceChange(acctID: AccountID, prevChgID: BalanceChangeID, chgAmt: ChangeAmount, 
+                        balAmt: BalanceAmount, xactDesc : XactDescription): 
+                        URIO[DbConn, DbOpResult[BalanceChangeSummary]] 
 ```
 
-Note the linkage of each BalanceChange to a previous (immutable!) BalanceChange record.
-Also note that the UNIQUE constraint on prev_bchg_id ensures that each BalanceChange record may 
+Note the linkage by `prevChgID` of each `BalanceChange` to a previous (immutable!) BalanceChange record.
+Also note that the `UNIQUE` constraint on `prev_bchg_id` ensures that each BalanceChange record may 
 only be used **once** as a previous balance.  This constraint ensures that we will grow an unforked 
-chain of balance-change operations for each account. 
+chain of BalanceChange records for each account. 
 
 This constraint comes with its own storage and write-performance costs (the cost of checking and storing  the UNIQUE index on prev_bchg_id).  Given the serializable transaction model of Cockroach DB, this
 index-based approach may not be strictly necessary.  (We could possibly prevent account balances from 
@@ -66,5 +67,15 @@ forking using only phantom-read isolation between competing transactions).  Howe
 and understandable mechanism that delivers the functionality we need for the Banquo prototype.
 
 ### Building and Testing Scala Code
+Build scala code with
+
+```sbt clean compile```
+
+To launch the Banquo HTTP service on port 8484
+
+```sbt run```
+
+Tested with:  OpenJDK 11.0.19 (GraalVM) on Microsoft Windows 10
 
 ### Container Build and Launch
+Docker setup is not done yet.

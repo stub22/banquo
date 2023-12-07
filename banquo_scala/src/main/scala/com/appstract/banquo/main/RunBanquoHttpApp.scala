@@ -4,11 +4,15 @@ import com.appstract.banquo.api.roach.DbConn
 import com.appstract.banquo.impl.bank.{BankAccountReadOpsImpl, BankAccountWriteOpsImpl}
 import com.appstract.banquo.impl.roach.RoachDbConnLayers
 import com.appstract.banquo.svc.BanquoHttpAppBuilder
-import zio.{URIO, ZIO, ZIOAppDefault}
+import zio.{RIO, Task, URIO, ZIO, ZIOAppDefault}
 import zio.http.Server
 
 object RunBanquoHttpApp extends ZIOAppDefault {
-	override def run = {
+
+	// TODO:  Read our HTTP port number from .env
+	val SERVER_PORT_NUM: Int = 8484
+
+	override def run: Task[Any] = {
 		val writeOps = new BankAccountWriteOpsImpl
 		val readOps = new BankAccountReadOpsImpl
 
@@ -21,19 +25,17 @@ object RunBanquoHttpApp extends ZIOAppDefault {
 
 		val appServiceNeedsServer: URIO[Server, Nothing] = Server.serve(httpApp.withDefaultErrorResponse)
 
-		// TODO:  Read our HTTP port number from .env
-		val serverPortNum : Int = 8484
-		val httpServer = Server.defaultWithPort(serverPortNum)
+		val httpServer = Server.defaultWithPort(SERVER_PORT_NUM)
 
 		val serverApp = appServiceNeedsServer.provide(httpServer)
 
 		val dbSetupJobNeedsDbLayer = setupDatabaseIfNeeded
-		val dbSetup = dbSetupJobNeedsDbLayer.provideLayer(dbConnLayer).debug("RunHttpApp.dbSetup complete")
+		val dbSetup = dbSetupJobNeedsDbLayer.provideLayer(dbConnLayer).debug("RunBanquoHttpApp.dbSetup complete")
 
 		// ZIO fiber runtime will run dbSetup, THEN our serverApp
 		dbSetup *> serverApp
 	}
-	def setupDatabaseIfNeeded = {
+	def setupDatabaseIfNeeded : RIO[DbConn, Unit] = {
 		val dbSetupJob: ZIO[DbConn, Throwable, Unit] = RunRoachTests.setupSchema
 		dbSetupJob
 	}

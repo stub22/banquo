@@ -32,20 +32,21 @@ class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 				URIO[DbConn, AcctOpResult[AccountID]] = {
 		// Must insert the Account record AND THEN insert an initial balance record.
 		// We must also commit the DB transaction.
-		val acctInsertJob: ZIO[DbConn, Throwable, DbOpResult[AccountID]] = myRoachWriter.insertAccount(customerName, customerAddress)
-		val combinedInsertJob: ZIO[DbConn, Throwable, DbOpResult[(AccountID, BalanceChangeID)]] = acctInsertJob.flatMap(acctRsltEith => {
-			// TODO: Consider using Cats-core EitherT here, to make the code more concise.
-			acctRsltEith.fold(
-				dbProblem => ZIO.succeed(Left(dbProblem)),
-				// TODO:  If balance-insert fails, we should .rollback to void the account insert.
-				// But in current impl, we believe that rollback happens implicitly when our DB conn is closed.
-				acctID => myRoachWriter.insertInitialBalance(acctID, initBal).map(_.map((acctID, _))))
-		}).debug(".makeAccount combinedInsertJob result, before commit")
+		val acctInsertJob: ZIO[DbConn, Throwable, DbOpResult[AccountID]] =
+				myRoachWriter.insertAccount(customerName, customerAddress)
+
+		val combinedInsertJob: ZIO[DbConn, Throwable, DbOpResult[(AccountID, BalanceChangeID)]] =
+			acctInsertJob.flatMap(acctRsltEith => {
+				acctRsltEith.fold(
+					dbProblem => ZIO.succeed(Left(dbProblem)),
+					// TODO:  If balance-insert fails, we should .rollback to void the account insert.
+					// But in current impl, we believe that rollback happens implicitly when our DB conn is closed.
+					acctID => myRoachWriter.insertInitialBalance(acctID, initBal).map(_.map((acctID, _))))
+			}).debug(".makeAccount combinedInsertJob result, before commit")
 
 		val opWithCommit: ZIO[DbConn, Throwable, DbOpResult[(AccountID, BalanceChangeID)]] =
 				combinedInsertJob <* myCommitJob
 
-		// Again here our code could be a bit briefer if we used Cats EitherT.
 		val opWithSimpleResult = opWithCommit.map(rsltPairEither =>
 			rsltPairEither.fold(
 				dbError => Left(AcctCreateFailed(dbError.toString)), 	// Error case

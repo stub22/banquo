@@ -43,7 +43,8 @@ trait RoachWriter {
 							xactDesc : XactDescription): URIO[DbConn, DbOpResult[BalanceChangeSummary]] = {
 		val stmtParams = Seq[Any](acctID, mySchema.BCHG_FLAVOR_FLOW, prevChgID, chgAmt, balAmt, xactDesc)
 		val sqlJob = mySqlExec.execSqlAndPullOneRow(INSERT_BAL_CHG, stmtParams, grabBalChangeResult)
-		val resultJob = sqlJob.map(_.map(rsltPair => BalanceChangeSummary(acctID, chgAmt, balAmt, rsltPair._2.toString, Option(xactDesc))))
+		val resultJob = sqlJob.map(_.map(rsltPair => BalanceChangeSummary(acctID, chgAmt, balAmt,
+									rsltPair._2.toString, Option(xactDesc))))
 		resultJob.debug(".insertBalanceChange result")
 	}
 
