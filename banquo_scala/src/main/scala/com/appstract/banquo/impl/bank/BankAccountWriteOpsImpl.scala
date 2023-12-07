@@ -2,7 +2,7 @@ package com.appstract.banquo.impl.bank
 
 import zio.{URIO, ZIO}
 import com.appstract.banquo.api.AccountOpResultTypes.AcctOpResult
-import com.appstract.banquo.api.{BankAccountWriteOps, DbConn, AcctCreateFailed, DbProblem}
+import com.appstract.banquo.api.{AcctCreateFailed, AcctOpError, BankAccountWriteOps, DbConn, DbProblem}
 import com.appstract.banquo.api.BankScalarTypes.{AccountId, BalanceAmount, BalanceChangeId, ChangeAmount}
 import com.appstract.banquo.impl.roach.{RoachReader, RoachWriter}
 
@@ -29,7 +29,7 @@ class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 	}
 
 	override def storeBalanceChange(acctID: AccountId, changeAmt: ChangeAmount): URIO[DbConn, AcctOpResult[Unit]] = {
-		???
+		ZIO.succeed(Left(AcctOpError("storeBalanceChange", acctID, "Not implemented yet!")))
 	}
 }
 //	def storeBalanceChange(acctID: AccountId, changeAmt: ChangeAmount): ZIO[Any, DbProblem, BalanceChangeId] = {

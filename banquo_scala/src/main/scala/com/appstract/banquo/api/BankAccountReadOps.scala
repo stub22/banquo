@@ -7,7 +7,7 @@ import com.appstract.banquo.api.BankScalarTypes.{AccountId, BalanceAmount}
 trait BankAccountReadOps {
 	def fetchAccountInfo(acctId: AccountId): URIO[DbConn, AcctOpResult[(AccountDetails, BalanceAmount)]]
 
-	// TODO: AccountHistory hould be some kind of paged result set, or stream
+	// TODO: AccountHistory hould be some kind of paged result set, or stream.
 	def fetchAccountHistory(acctId: AccountId): URIO[DbConn, AcctOpResult[AccountHistory]]
 
 }
