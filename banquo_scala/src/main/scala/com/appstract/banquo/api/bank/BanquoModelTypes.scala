@@ -10,10 +10,10 @@ import com.appstract.banquo.api.bank.BankScalarTypes._
 case class AccountSummary(accountID : AccountID, customerName: CustomerName, customerAddress: CustomerAddress, balanceAmt: BalanceAmount)
 
 case class AccountDetails(accountID : AccountID, customerName: CustomerName, customerAddress: CustomerAddress,
-						  createTimestamp: Timestamp)
+						  createTimestamp: DbTimestamp)
 
 case class BalanceChangeSummary(acctID: AccountID, changeAmt: ChangeAmount, balanceAmt: BalanceAmount,
-						createTimestamp: Timestamp)
+						createTimestamp: DbTimestamp)
 
 trait AccountOpProblem
 case class AcctOpFailedNoAccount(opName : String, accountID: AccountID, details : String) extends AccountOpProblem

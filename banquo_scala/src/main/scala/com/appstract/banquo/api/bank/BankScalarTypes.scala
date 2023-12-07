@@ -5,7 +5,7 @@ object BankScalarTypes {
 	type AccountID = String
 	type CustomerName = String
 	type CustomerAddress = String
-	type Timestamp = JsqlTimestamp
+	type DbTimestamp = JsqlTimestamp
 
 	type BalanceChangeID = Long
 	type ChangeAmount = BigDecimal

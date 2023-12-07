@@ -99,13 +99,15 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		// 404 Not Found: If the account does not exist
 		// 422 Unprocessable Entity: If the transaction fails due to insufficient funds or other reasons.
 
+		// TODO:  On success we are meant to return "the transaction details".
+		// Perhaps these should include the new balance, and the transaction timestamp.
+
 		val OP_NAME = "handlePostTransaction"
 
 		val bodyTxt = request.body.asString.debug("POST /transaction with bodyTxt")
 		val acctID : AccountID = ???
 		val chgAmt : ChangeAmount = ???
 		val bchgJob: URIO[DbConn, AcctOpResult[BalanceChangeSummary]] = accountWriteOps.storeBalanceChange(acctID, chgAmt)
-
 
 		ZIO.succeed(Response.text("bad request").withStatus(Status.BadRequest))
 

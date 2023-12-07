@@ -14,20 +14,14 @@ class BankAccountReadOpsImpl extends BankAccountReadOps {
 
 	override def fetchAccountInfo(acctID: AccountID): URIO[DbConn, AcctOpResult[AccountSummary]] = {
 		val OP_NAME = "fetchAccountInfo"
-		// This code would be shorter if we admitted Cats-core EitherT.
-		val detSelJob: URIO[DbConn, DbOpResult[AccountDetails]] = myRoachReader.selectAccountDetails(acctID)
-		val balChkJob: URIO[DbConn, DbOpResult[BalanceChangeInternal]] = myRoachReader.selectLastBalanceChange(acctID)
-		val comboJob: URIO[DbConn, (DbOpResult[AccountDetails], DbOpResult[BalanceChangeInternal])] = for {
-			acctDetailsResultEither <- detSelJob
-			balRecResultEither <- balChkJob
-		} yield (acctDetailsResultEither, balRecResultEither)
-		val summaryJob = comboJob.map(pairOfRsltEithers => {
-			pairOfRsltEithers match {
-				case(Right(acctDetails), Right(balChange)) => Right(buildAccountSummary(acctDetails, balChange))
-				case(Left(acctEmpty : DbEmptyResult), _) => Left(AcctOpFailedNoAccount(OP_NAME, acctID, acctEmpty.toString))
-				case(Left(otherErr), _) => Left(AcctOpError(OP_NAME, acctID, otherErr.toString))
-				case(_, Left(balErr)) => Left(AcctOpError(OP_NAME, acctID, balErr.toString))
-			}
+		val detailsJob: URIO[DbConn, DbOpResult[AccountDetails]] = myRoachReader.selectAccountDetails(acctID)
+		val summaryJob: ZIO[DbConn, Nothing, AcctOpResult[AccountSummary]] = detailsJob.flatMap(_  match {
+			case Left(acctEmpty : DbEmptyResult) => ZIO.succeed(Left(AcctOpFailedNoAccount(OP_NAME, acctID, acctEmpty.toString)))
+			case Left(otherErr) => ZIO.succeed(Left(AcctOpError(OP_NAME, acctID, otherErr.toString)))
+			case Right(acctDetails) => myRoachReader.selectLastBalanceChange(acctID).map(_ match {
+					case Left(balErr) => Left(AcctOpError(OP_NAME, acctID, balErr.toString))
+					case Right(balChgRec) => Right(buildAccountSummary(acctDetails, balChgRec))
+			})
 		})
 		summaryJob
 	}

@@ -1,11 +1,11 @@
 package com.appstract.banquo.impl.bank
 
-import zio.{URIO, ZIO}
+import zio.{RIO, URIO, ZIO}
 import com.appstract.banquo.api.bank.AccountOpResultTypes.AcctOpResult
 import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, BalanceChangeID, ChangeAmount}
 import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
-import com.appstract.banquo.api.bank.{AcctCreateFailed, AcctOpError, BalanceChangeSummary, BankAccountWriteOps}
-import com.appstract.banquo.api.roach.DbConn
+import com.appstract.banquo.api.bank.{AcctCreateFailed, AcctOpError, AcctOpFailedInsufficientFunds, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountWriteOps}
+import com.appstract.banquo.api.roach.{BalanceChangeInternal, DbConn, DbEmptyResult}
 import com.appstract.banquo.impl.roach.{RoachReader, RoachWriter, SqlEffectMaker}
 
 
@@ -60,17 +60,28 @@ class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 
 	override def storeBalanceChange(acctID: AccountID, changeAmt: ChangeAmount):
 									URIO[DbConn, AcctOpResult[BalanceChangeSummary]] = {
+		val OP_NAME = "storeBalanceChange"
+		val prevBalChgJob: URIO[DbConn, DbOpResult[BalanceChangeInternal]] = myRoachReader.selectLastBalanceChange(acctID)
+		prevBalChgJob.flatMap(_ match {
+			case Left(balEmpty : DbEmptyResult) => ZIO.succeed(Left(AcctOpFailedNoAccount(OP_NAME, acctID, balEmpty.toString)))
+			case Left(otherErr) => ZIO.succeed(Left(AcctOpError(OP_NAME, acctID, otherErr.toString)))
+			case Right(prevBalChg) => {
+				val nxtBalAmt = prevBalChg.balanceAmt.+(changeAmt)
+				if (nxtBalAmt.sign >= 0) {
+					val insertResult: URIO[DbConn, DbOpResult[BalanceChangeSummary]] =
+								myRoachWriter.insertBalanceChange(acctID, prevBalChg.changeID, changeAmt, nxtBalAmt)
+					insertResult.map(_.fold(
+						dbErr => Left(AcctOpError(OP_NAME, acctID, dbErr.toString)),
+						chgSumm => Right(chgSumm)
+					))
+				}
+				else ZIO.succeed(Left(AcctOpFailedInsufficientFunds(OP_NAME, acctID,
+							s"previousBalance=${prevBalChg}, change=${changeAmt}")))
+			}
+		})
 
-		ZIO.succeed(Left(AcctOpError("storeBalanceChange", acctID, "Not implemented yet!")))
 	}
 
 }
-//	def storeBalanceChange(acctID: AccountId, changeAmt: ChangeAmount): ZIO[Any, DbProblem, BalanceChangeId] = {
-		/*	val combinedResultEith: Either[DbError, BalanceChangeId] = for {
-				previousChange <- myRoachReader.selectLastBalanceChange(acctID)
-				nxtBalAmt = previousChange.balanceAmt.+(changeAmt)
-				nextChgId <- myRoachWriter.insertBalanceChange(acctID, previousChange.changeId, changeAmt, nxtBalAmt)
-			} yield(nextChgId)
-			ZIO.fromEither(combinedResultEith)
-		*/
+
 
