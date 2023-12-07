@@ -1,11 +1,12 @@
 package com.appstract.banquo.impl.roach
 
-import com.appstract.banquo.api.{AccountDetails, BalanceChange, DbConn}
-import com.appstract.banquo.api.BankScalarTypes.{AccountID, CustomerAddress, CustomerName}
-import com.appstract.banquo.api.DbOpResultTypes.DbOpResult
+// TODO: In principle, we should not see these higher level Bank types here in the lower level Roach impl package.
+import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, CustomerAddress, CustomerName}
+import com.appstract.banquo.api.bank.AccountDetails
+import com.appstract.banquo.api.roach.DbOpResultTypes.{DbOpResult}
+import com.appstract.banquo.api.roach.{BalanceChangeInternal, DbConn, DbEmptyResult, DbOtherError}
 import zio.{RIO, URIO, ZIO}
 
-import java.sql.{Timestamp => JsqlTimestamp}
 import java.sql.{ResultSet => JdbcResultSet}
 
 /***
@@ -14,22 +15,13 @@ import java.sql.{ResultSet => JdbcResultSet}
  */
 trait RoachReader {
 
-	val mySqlExec = new SqlEffectMaker
+	val mySqlJobMaker = new SqlEffectMaker
 
 	val SELECT_ACCT_DETAILS = "SELECT acct_id, cust_name, cust_address, acct_create_time FROM account WHERE acct_id = ?"
-	def selectAccountDetails(acctID: AccountID): RIO[DbConn, DbOpResult[AccountDetails]] = {
+	def selectAccountDetails(acctID: AccountID): URIO[DbConn, DbOpResult[AccountDetails]] = {
 		val stmtParams = Seq[Any](acctID)
-/*		val grabDetailsFunc = (rs : JdbcResultSet) => {
-			val resultAcctID : AccountId = rs.getString(1)
-			val custName : CustomerName = rs.getString(2)
-			val custAddr : CustomerAddress = rs.getString(3)
-			val createStamp = rs.getTimestamp(4)
-			assert(resultAcctID == acctID)
-			AccountDetails(resultAcctID, custName, custAddr, createStamp)
-		}
- */
 		val sqlJob: URIO[DbConn, DbOpResult[AccountDetails]] =
-				mySqlExec.execSqlAndPullOneRow(SELECT_ACCT_DETAILS, stmtParams, grabAccountDetails)
+				mySqlJobMaker.execSqlAndPullOneRow(SELECT_ACCT_DETAILS, stmtParams, grabAccountDetails)
 
 		// Redundant sanity check - make sure the acctID matches!
 		// 	val jobWithSanityCheck = sqlJob.map(acctDetails => {assert(acctDetails.accountID == acctID); acctDetails})
@@ -63,7 +55,7 @@ completely guaranteed."
 	val SELECT_LAST_BAL_CHG = "SELECT bchg_id, acct_id, chg_flavor, prev_bchg_id, chg_amt, balance, chg_create_time " +
 			"FROM balance_change WHERE bchg_id NOT IN SELECT "
 	".stripMargin"
-	def selectLastBalanceChange(acctID : AccountID) : URIO[DbConn, BalanceChange] = {
+	def selectLastBalanceChange(acctID : AccountID) : URIO[DbConn, BalanceChangeInternal] = {
 		val stmtArgs = Seq[Any](acctID)
 		???
 	}
@@ -72,21 +64,30 @@ completely guaranteed."
 	// Our initial implementation returns only the last maxRecordCount records, with the most recent record first.
 	val SELECT_ALL_BAL_CHGS = "SELECT bchg_id, acct_id, chg_flavor, prev_bchg_id, chg_amt, balance, chg_create_time " +
 			"FROM balance_change WHERE acct_id = ? ORDER BY bchg_id DESC LIMIT ?"
-	def selectRecentBalanceChanges(acctID : AccountID, maxRecordCount : Int) : URIO[DbConn, Iterable[BalanceChange]] = {
-		val stmtArgs = Seq[Any](acctID, maxRecordCount)
+	def selectRecentBalanceChanges(acctID : AccountID, maxRecordCount : Int) : URIO[DbConn, DbOpResult[Seq[BalanceChangeInternal]]] = {
+		val OP_NAME = "selectRecentBalanceChanges"
+		val stmtParams = Seq[Any](acctID, maxRecordCount)
 
-		???
+		val sqlJob: ZIO[DbConn, Throwable, Seq[BalanceChangeInternal]] = mySqlJobMaker.execSqlAndPullRows(SELECT_ALL_BAL_CHGS, stmtParams, grabBalanceChange)
+		val jobWithSizeHandled: RIO[DbConn, DbOpResult[Seq[BalanceChangeInternal]]] = sqlJob.map(balChgSeq => {
+			val numBalChgs = balChgSeq.size
+			if (numBalChgs > 0) Right(balChgSeq)
+			else Left(DbEmptyResult(OP_NAME, SELECT_ALL_BAL_CHGS, stmtParams.mkString(", ")))
+		})
+		val jobWithErrorHandling = jobWithSizeHandled.catchAll(thrown =>
+			ZIO.succeed(Left(DbOtherError(OP_NAME, SELECT_ALL_BAL_CHGS, stmtParams.mkString(", "), thrown.toString))))
+		jobWithErrorHandling
 	}
 
-	private def grabBalanceChange(rs : JdbcResultSet) : BalanceChange = {
+	private def grabBalanceChange(rs : JdbcResultSet) : BalanceChangeInternal = {
 		val bchgID = rs.getLong(1)
 		val acctID = rs.getString(2)
 		val changeFlavor = rs.getString(3)
-		val prevBchgID_opt : Option[Long] = Option(rs.getLong(4)) // May be null/None, but only when chgFlav == 'INITIAL'
+		val prevBchgID_opt : Option[Long] = Option(rs.getLong(4)) // May be null/None, but only when changeFlavor == 'INITIAL'
 		val changeAmt = rs.getBigDecimal(5)
 		val balanceAmt = rs.getBigDecimal(6)
 		val createStamp = rs.getTimestamp(7)
-		BalanceChange(bchgID, acctID, changeFlavor, prevBchgID_opt, changeAmt, balanceAmt, createStamp)
+		BalanceChangeInternal(bchgID, acctID, changeFlavor, prevBchgID_opt, changeAmt, balanceAmt, createStamp)
 	}
 
 }

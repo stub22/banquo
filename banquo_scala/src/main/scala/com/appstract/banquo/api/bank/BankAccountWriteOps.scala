@@ -1,9 +1,9 @@
-package com.appstract.banquo.api
+package com.appstract.banquo.api.bank
 
-import zio.{URIO, ZIO}
-
-import com.appstract.banquo.api.AccountOpResultTypes.AcctOpResult
-import com.appstract.banquo.api.BankScalarTypes._
+import com.appstract.banquo.api.bank.AccountOpResultTypes.AcctOpResult
+import com.appstract.banquo.api.bank.BankScalarTypes._
+import com.appstract.banquo.api.roach.DbConn
+import zio.URIO
 
 /** *
  * Each operation produces a ZIO effect that requires wiring to a DbConn service.

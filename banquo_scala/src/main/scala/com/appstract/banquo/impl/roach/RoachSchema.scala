@@ -1,6 +1,6 @@
 package com.appstract.banquo.impl.roach
 
-import com.appstract.banquo.api.{AccountDetails, BalanceChange, DbConn}
+import com.appstract.banquo.api.roach.DbConn
 
 import zio.ZIO
 

@@ -1,6 +1,6 @@
 package com.appstract.banquo.main
 
-import com.appstract.banquo.api.DbConn
+import com.appstract.banquo.api.roach.DbConn
 import com.appstract.banquo.impl.bank.{BankAccountReadOpsImpl, BankAccountWriteOpsImpl}
 import com.appstract.banquo.impl.roach.RoachDbConnLayers
 import com.appstract.banquo.svc.BanquoHttpAppBuilder

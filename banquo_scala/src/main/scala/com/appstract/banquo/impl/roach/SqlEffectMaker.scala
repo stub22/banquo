@@ -1,7 +1,7 @@
 package com.appstract.banquo.impl.roach
 
-import com.appstract.banquo.api.{DbConn, DbEmptyResult, DbOtherError, DbProblem}
-import com.appstract.banquo.api.DbOpResultTypes.DbOpResult
+import com.appstract.banquo.api.roach.{DbConn, DbEmptyResult, DbOtherError, DbProblem}
+import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
 import zio.{RIO, Task, URIO, ZIO}
 
 import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData}

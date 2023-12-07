@@ -1,8 +1,9 @@
 package com.appstract.banquo.svc
 
-import com.appstract.banquo.api.AccountOpResultTypes.{AccountHistory, AcctOpResult}
-import com.appstract.banquo.api.BankScalarTypes.{AccountID, BalanceAmount, ChangeAmount}
-import com.appstract.banquo.api.{AccountDetails, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps, BankAccountWriteOps, DbConn}
+import com.appstract.banquo.api.bank.AccountOpResultTypes.{AccountHistory, AcctOpResult}
+import com.appstract.banquo.api.bank.{AccountDetails, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps, BankAccountWriteOps}
+import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, ChangeAmount}
+import com.appstract.banquo.api.roach.DbConn
 import com.appstract.banquo.impl.bank.BankAccountWriteOpsImpl
 import zio._
 import zio.http._
@@ -64,8 +65,8 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		// 404 Not Found: If the account does not exist.
 
 		// TODO: AccountHistory should be some kind of paged result set, or stream.
-		// But our initial implementation is to eagerly, naively fetch ALL account transaction history into one
-		// sequence in memory, then serialize that into a Json value in memory, which is used to build the response.
+		// But our initial implementation is to eagerly, naively fetch a single chunk of account transaction history
+		// into one sequence in memory, then serialize that into a Json value in memory, which is used to build the response.
 		val OP_NAME = "handleGetTransactionHistory"
 
 		val acctHistJob: URIO[DbConn, AcctOpResult[AccountHistory]] = accountReadOps.fetchAccountHistory(acctId)

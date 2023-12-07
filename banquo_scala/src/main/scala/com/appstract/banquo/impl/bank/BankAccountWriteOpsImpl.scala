@@ -1,10 +1,11 @@
 package com.appstract.banquo.impl.bank
 
 import zio.{URIO, ZIO}
-import com.appstract.banquo.api.AccountOpResultTypes.AcctOpResult
-import com.appstract.banquo.api.{AcctCreateFailed, AcctOpError, BalanceChangeSummary, BankAccountWriteOps, DbConn}
-import com.appstract.banquo.api.BankScalarTypes.{AccountID, BalanceAmount, BalanceChangeID, ChangeAmount}
-import com.appstract.banquo.api.DbOpResultTypes.DbOpResult
+import com.appstract.banquo.api.bank.AccountOpResultTypes.AcctOpResult
+import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, BalanceChangeID, ChangeAmount}
+import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
+import com.appstract.banquo.api.bank.{AcctCreateFailed, AcctOpError, BalanceChangeSummary, BankAccountWriteOps}
+import com.appstract.banquo.api.roach.DbConn
 import com.appstract.banquo.impl.roach.{RoachReader, RoachWriter, SqlEffectMaker}
 
 

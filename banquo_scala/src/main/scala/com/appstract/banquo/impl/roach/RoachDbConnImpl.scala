@@ -1,6 +1,6 @@
 package com.appstract.banquo.impl.roach
 
-import com.appstract.banquo.api.DbConn
+import com.appstract.banquo.api.roach.DbConn
 import org.postgresql.ds.common.BaseDataSource
 import zio.{Scope, ZIO, ZLayer}
 

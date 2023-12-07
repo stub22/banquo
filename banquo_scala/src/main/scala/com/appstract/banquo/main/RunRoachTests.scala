@@ -1,11 +1,11 @@
 package com.appstract.banquo.main
 
-import com.appstract.banquo.api.AccountOpResultTypes.AcctOpResult
-import com.appstract.banquo.api.BankScalarTypes.AccountID
-import com.appstract.banquo.api.DbConn
+import com.appstract.banquo.api.bank.AccountOpResultTypes.AcctOpResult
+import com.appstract.banquo.api.bank.BankScalarTypes.AccountID
+import com.appstract.banquo.api.roach.DbConn
 import com.appstract.banquo.impl.bank.BankAccountWriteOpsImpl
 import com.appstract.banquo.impl.roach.{RoachDbConnLayers, RoachSchema, SqlEffectMaker}
-import zio.stream.{ZStream}
+import zio.stream.ZStream
 import zio.{Scope, URIO, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer}
 
 import scala.math.BigDecimal.RoundingMode
