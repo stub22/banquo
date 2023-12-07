@@ -14,6 +14,7 @@ trait RoachReader {
 	// TODO: AllBalanceChanges should be some kind of paged result set, or stream
 	def selectAllBalanceChanges(acctId : AccountId) : URIO[DbConn, DbResult[Iterable[BalanceChange]]] = ???
 
+	val SELECT_ACCT_DETAILS = "SELECT acct_id, cust_name, cust_address, acct_create_time"
 	def selectAccountDetails(acctId : AccountId) : URIO[DbConn, DbResult[AccountDetails]] = ???
 }
 

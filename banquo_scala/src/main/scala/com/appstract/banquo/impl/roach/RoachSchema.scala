@@ -1,7 +1,8 @@
 package com.appstract.banquo.impl.roach
 
-import com.appstract.banquo.api.{AccountDetails, BalanceChange}
-import com.appstract.banquo.api.BankScalarTypes.AccountId
+import com.appstract.banquo.api.{AccountDetails, BalanceChange, DbConn}
+
+import zio.ZIO
 
 
 object RoachSchema {
@@ -9,13 +10,12 @@ object RoachSchema {
 	val COL_ACCT_ID = "acct_id"
 	val CREATE_TABLE_ACCOUNT =
 		"""CREATE TABLE IF NOT EXISTS account (
-			acct_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			cust_name STRING,
-		 	cust_address STRING,
-   			acct_create_time TIMESTAMPTZ DEFAULT NOW()
-		 )""".stripMargin
+			| acct_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			| cust_name STRING NOT NULL,
+		 	| cust_address STRING NOT NULL,
+   			| acct_create_time TIMESTAMPTZ DEFAULT NOW()) """.stripMargin
 
-	val CREATE_ENUM_BAL_CHG_FLAVOR = "CREATE TYPE IF NOT EXISTS bal_chg_flavor AS ENUM ('INITIAL', 'FLOW')"
+	val CREATE_ENUM_BAL_CHG_FLAVOR = "CREATE TYPE IF NOT EXISTS Bal_Chg_Flavor AS ENUM ('INITIAL', 'FLOW')"
 
 	val BCHG_FLAVOR_INITIAL = "INITIAL"
 	val BCHG_FLAVOR_FLOW = "FLOW"
@@ -27,21 +27,23 @@ object RoachSchema {
 	// This failure should actually happen even without the UNIQUE constraint, assuming Cockroach SERIALIZABLE fails on
 	// phantom reads).
 	// These INT8 values are 64 bits, so we bind them to Java/Scala Long.
+	// TODO: Consider additional indexes to improve read performance, with some tradeoff in storage cost and write performance.
+	// TODO: Consider Foreign-key constraint on link to account.
 	val COL_PREV_BCHG_ID = "prev_bchg_id"
 	val CREATE_TABLE_BALANCE_CHG =
 		"""CREATE TABLE IF NOT EXISTS balance_change (
-	 			bchg_id INT8 PRIMARY KEY DEFAULT unique_rowid(),
-	 			acct_id UUID,
-				chg_flavor bal_chg_flavor,
-				prev_bchg_id INT8 UNIQUE,
-				chg_amt DECIMAL,
-				balance DECIMAL,
-				chg_create_time TIMESTAMPTZ DEFAULT NOW()) """.stripMargin
+ 			| bchg_id INT8 PRIMARY KEY DEFAULT unique_rowid(),
+ 			| acct_id UUID NOT NULL,
+ 			| chg_flavor Bal_Chg_Flavor NOT NULL,
+ 			| prev_bchg_id INT8 UNIQUE,
+ 			| chg_amt DECIMAL NOT NULL,
+ 			| balance DECIMAL NOT NULL,
+  			| chg_create_time TIMESTAMPTZ NOT NULL DEFAULT NOW()) """.stripMargin
 
 
 	val mySqlExec = new SqlExecutor
 
-	def createTablesAsNeeded = {
+	def createTablesAsNeeded: ZIO[DbConn, Throwable, Unit] = {
 		val z1 = mySqlExec.execUpdateNoResult(CREATE_TABLE_ACCOUNT).debug("CREATE_TABLE_ACCOUNT")
 		val z2 = mySqlExec.execUpdateNoResult(CREATE_ENUM_BAL_CHG_FLAVOR).debug("CREATE_ENUM_BAL_CHG_FLAVOR")
 		val z3 = mySqlExec.execUpdateNoResult(CREATE_TABLE_BALANCE_CHG).debug("CREATE_TABLE_BALANCE_CHG")

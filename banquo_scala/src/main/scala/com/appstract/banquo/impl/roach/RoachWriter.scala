@@ -5,6 +5,10 @@ import com.appstract.banquo.api.DbConn
 import zio.ZIO
 
 
+/***
+ * Note that these operations do NOT commit their own SQL transactions.
+ * Commit/rollback is the responsibility of client code.
+ */
 trait RoachWriter {
 	val mySchema = RoachSchema
 	val mySqlExec = new SqlExecutor
@@ -32,7 +36,7 @@ trait RoachWriter {
 				"VALUES (?, ?, ?, ?, ?) RETURNING bchg_id"
 
 	def insertBalanceChange(acctId: AccountId, prevChgId: BalanceChangeId, chgAmt: ChangeAmount, balAmt: BalanceAmount):
-	ZIO[DbConn, Throwable, BalanceChangeId] = {
+			ZIO[DbConn, Throwable, BalanceChangeId] = {
 		val stmtArgs = Seq[Any](acctId, mySchema.BCHG_FLAVOR_FLOW, prevChgId, chgAmt, balAmt)
 		val z1 = mySqlExec.execSqlAndPullOneLong(INSERT_BAL_CHG, stmtArgs)
 		z1.debug(".insertBalanceChange result")

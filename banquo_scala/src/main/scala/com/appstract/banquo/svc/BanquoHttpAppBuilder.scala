@@ -2,14 +2,15 @@ package com.appstract.banquo.svc
 
 import com.appstract.banquo.api.AccountOpResultTypes.{AccountHistory, AcctOpResult}
 import com.appstract.banquo.api.BankScalarTypes.{AccountId, BalanceAmount, ChangeAmount}
-import com.appstract.banquo.api.{AccountDetails, AcctOpError, AcctOpFailedNoAccount, BankAccountReadOps, BankAccountWriteOps, DbConn}
+import com.appstract.banquo.api.{AccountDetails, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps, BankAccountWriteOps, DbConn}
 import com.appstract.banquo.impl.bank.BankAccountWriteOpsImpl
 import zio._
 import zio.http._
 import zio.json._
 
 /*
-We want each inbound HTTP Request to be assigned its own JDBC connection (possibly from some pool).
+ * Each inbound HTTP Request should be assigned its own JDBC connection (possibly from some pool).
+ * The connection is opened+closed at the boundary of the .provideLayer(dbConnLayer) step in each operation.
  */
 
 class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadOps: => BankAccountReadOps,
@@ -37,6 +38,7 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 
 		val wiredAcctInfJob: UIO[AcctOpResult[(AccountDetails, BalanceAmount)]]
 					= acctInfJob.provideLayer(dbConnLayer).catchAll(thrown => {
+			// Most likely we got an error in the DB connection opening process.
 			ZIO.succeed(Left(AcctOpError(OP_NAME, acctId, s"Exception: ${thrown.toString}")))
 		})
 
@@ -53,7 +55,7 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 				Response.text(other.toString).withStatus(Status.InternalServerError)
 			}
 		})
-		// When we apply the dbLayer, we now have a job that might fail in the case where
+
 		responseJob.debug(s"${OP_NAME} Response: ")
 	}
 
@@ -62,14 +64,15 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		// 404 Not Found: If the account does not exist.
 
 		// TODO: AccountHistory should be some kind of paged result set, or stream.
-		// But our initial implementation is to eagerly, naively fetch ALL account transactions into one
-		// sequence in memory, then serialize that into a Json value in memory.
+		// But our initial implementation is to eagerly, naively fetch ALL account transaction history into one
+		// sequence in memory, then serialize that into a Json value in memory, which is used to build the response.
 		val OP_NAME = "handleGetTransactionHistory"
 
 		val acctHistJob: URIO[DbConn, AcctOpResult[AccountHistory]] = accountReadOps.fetchAccountHistory(acctId)
 
 		val wiredAcctHistJob: UIO[AcctOpResult[AccountHistory]] =
 							acctHistJob.provideLayer(dbConnLayer).catchAll(thrown => {
+			// Most likely we got an error in the DB connection opening process.
 			ZIO.succeed(Left(AcctOpError(OP_NAME, acctId, s"Exception: ${thrown.toString}")))
 		})
 
@@ -99,8 +102,10 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		val OP_NAME = "handlePostTransaction"
 
 		val bodyTxt = request.body.asString.debug("POST /transaction with bodyTxt")
+		val acctID : AccountId = ???
+		val chgAmt : ChangeAmount = ???
+		val bchgJob: URIO[DbConn, AcctOpResult[BalanceChangeSummary]] = accountWriteOps.storeBalanceChange(acctID, chgAmt)
 
-		// def storeBalanceChange(acctID: AccountId, changeAmt: ChangeAmount): URIO[DbConn, AcctOpResult[Unit]]
 
 		ZIO.succeed(Response.text("bad request").withStatus(Status.BadRequest))
 
