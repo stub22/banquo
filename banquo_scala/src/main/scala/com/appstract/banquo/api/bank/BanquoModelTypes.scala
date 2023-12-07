@@ -6,6 +6,9 @@ import com.appstract.banquo.api.bank.BankScalarTypes._
 /**
  * Our result types reported to the HTTP service.
  */
+
+case class AccountSummary(accountID : AccountID, customerName: CustomerName, customerAddress: CustomerAddress, balanceAmt: BalanceAmount)
+
 case class AccountDetails(accountID : AccountID, customerName: CustomerName, customerAddress: CustomerAddress,
 						  createTimestamp: Timestamp)
 

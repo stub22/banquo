@@ -3,15 +3,16 @@ package com.appstract.banquo.impl.roach
 // TODO: In principle, we should not see these higher level Bank types here in the lower level Roach impl package.
 import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, CustomerAddress, CustomerName}
 import com.appstract.banquo.api.bank.AccountDetails
-import com.appstract.banquo.api.roach.DbOpResultTypes.{DbOpResult}
-import com.appstract.banquo.api.roach.{BalanceChangeInternal, DbConn, DbEmptyResult, DbOtherError}
+import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
+import com.appstract.banquo.api.roach.{BalanceChangeInternal, DbConn, DbEmptyResult, DbOtherError, DbProblem}
 import zio.{RIO, URIO, ZIO}
 
 import java.sql.{ResultSet => JdbcResultSet}
 
 /***
  * These are all read-only operations.  They do not .commit or .rollback.
- * When these operations encounter exceptions, they are routed
+ * When these operations encounter exceptions, they are captured as DbProblem instances, which occur on the
+ * Left side of the DbOpResult Either results.
  */
 trait RoachReader {
 
@@ -36,32 +37,38 @@ trait RoachReader {
 		AccountDetails(resultAcctID, custName, custAddr, createStamp)
 	}
 
-	/*
+	/***
 	There are at least 3 different ways we might attempt to select the LAST balance_change for an account.
 	1) Select the row with the highest bchg_id (which is set by a mostly-increasing sequence)
 	2) Select the row with the highest chg_create_time timestamp.
 	3) Select the row with a bchg_id which is not currently used by any other row as a prev_bchg_id.
 
 	In most cases, all of these approaches will find the same row.
-	In our prototype implementation we have decided to use approach #3.
+	Approach #3 appears to be the most bulletproof.
+	However in our prototype implementation we have decided to initially use Approach #1, implicitly,
+	by using the ordered results from a delegating call to selectRecentBalanceChanges.
+	 */
+
+	def selectLastBalanceChange(acctID : AccountID) : URIO[DbConn, DbOpResult[BalanceChangeInternal]] = {
+		val stmtArgs = Seq[Any](acctID)
+		val recentChangesJob = selectRecentBalanceChanges(acctID, 10)
+		val naiveLastRecordJob = recentChangesJob.map(dbOpRslt => dbOpRslt.map(balChgSeq => balChgSeq.head))
+		naiveLastRecordJob
+	}
+/***
+	// TODO: AllBalanceChanges should be some kind of paged result set, or stream.
+	// Our initial implementation returns only the last maxRecordCount records, with the most recent record first.
+	// This impl relies on ordering by the bchg_id, which is assigned by CockroachDB using unique_rowid().
+	// TODO: Investigate the conditions under which these records could possibly be out of order.
+It may be that our balance-fork preventing mechanism is sufficient to prevent balance change records for the same
+account appearing with out-of-order IDs.
 
 https://www.cockroachlabs.com/docs/v23.1/sql-faqs#how-do-i-auto-generate-unique-row-ids-in-cockroachdb
-
 "Upon insert or upsert, the unique_rowid() function generates a default value from the timestamp and ID of the
 node executing the insert. Such time-ordered values are likely to be globally unique except in cases where a very
 large number of IDs (100,000+) are generated per node per second. Also, there can be gaps and the order is not
 completely guaranteed."
-	 */
-	val SELECT_LAST_BAL_CHG = "SELECT bchg_id, acct_id, chg_flavor, prev_bchg_id, chg_amt, balance, chg_create_time " +
-			"FROM balance_change WHERE bchg_id NOT IN SELECT "
-	".stripMargin"
-	def selectLastBalanceChange(acctID : AccountID) : URIO[DbConn, BalanceChangeInternal] = {
-		val stmtArgs = Seq[Any](acctID)
-		???
-	}
-
-	// TODO: AllBalanceChanges should be some kind of paged result set, or stream.
-	// Our initial implementation returns only the last maxRecordCount records, with the most recent record first.
+	*/
 	val SELECT_ALL_BAL_CHGS = "SELECT bchg_id, acct_id, chg_flavor, prev_bchg_id, chg_amt, balance, chg_create_time " +
 			"FROM balance_change WHERE acct_id = ? ORDER BY bchg_id DESC LIMIT ?"
 	def selectRecentBalanceChanges(acctID : AccountID, maxRecordCount : Int) : URIO[DbConn, DbOpResult[Seq[BalanceChangeInternal]]] = {

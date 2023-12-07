@@ -1,10 +1,9 @@
 package com.appstract.banquo.svc
 
 import com.appstract.banquo.api.bank.AccountOpResultTypes.{AccountHistory, AcctOpResult}
-import com.appstract.banquo.api.bank.{AccountDetails, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps, BankAccountWriteOps}
+import com.appstract.banquo.api.bank.{AccountDetails, AccountSummary, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps, BankAccountWriteOps}
 import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, ChangeAmount}
 import com.appstract.banquo.api.roach.DbConn
-import com.appstract.banquo.impl.bank.BankAccountWriteOpsImpl
 import zio._
 import zio.http._
 import zio.json._
@@ -34,10 +33,10 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 
 		val OP_NAME = "handleGetAccountInfo"
 
-		val acctInfJob: URIO[DbConn, AcctOpResult[(AccountDetails, BalanceAmount)]]
+		val acctInfJob: URIO[DbConn, AcctOpResult[AccountSummary]]
 					= accountReadOps.fetchAccountInfo(acctId)
 
-		val wiredAcctInfJob: UIO[AcctOpResult[(AccountDetails, BalanceAmount)]]
+		val wiredAcctInfJob: UIO[AcctOpResult[AccountSummary]]
 					= acctInfJob.provideLayer(dbConnLayer).catchAll(thrown => {
 			// Most likely we got an error in the DB connection opening process.
 			ZIO.succeed(Left(AcctOpError(OP_NAME, acctId, s"Exception: ${thrown.toString}")))
@@ -45,8 +44,8 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 
 		// This responseJob must always produce an HTTP response.
 		val responseJob: UIO[Response] = wiredAcctInfJob.map(_ match {
-			case Right((acctInfo, balAmt)) => {
-				val txt = s"acctInfo=${acctInfo}, balAmt=${balAmt}"
+			case Right(acctSummary) => {
+				val txt = s"acctSummary=${acctSummary}"
 				Response.text(txt).withStatus(Status.Ok)
 			}
 			case Left(failedNoAcct : AcctOpFailedNoAccount)	=> {

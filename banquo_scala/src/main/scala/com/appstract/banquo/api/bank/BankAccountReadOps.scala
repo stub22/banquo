@@ -7,7 +7,7 @@ import zio.URIO
 
 
 trait BankAccountReadOps {
-	def fetchAccountInfo(acctId: AccountID): URIO[DbConn, AcctOpResult[(AccountDetails, BalanceAmount)]]
+	def fetchAccountInfo(acctId: AccountID): URIO[DbConn, AcctOpResult[AccountSummary]]
 
 	// TODO: AccountHistory could be some kind of paged result set, or stream.
 	def fetchAccountHistory(acctId: AccountID): URIO[DbConn, AcctOpResult[AccountHistory]]
