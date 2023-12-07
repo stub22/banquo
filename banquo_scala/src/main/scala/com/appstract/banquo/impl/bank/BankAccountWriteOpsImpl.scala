@@ -2,12 +2,11 @@ package com.appstract.banquo.impl.bank
 
 import zio.{RIO, URIO, ZIO}
 import com.appstract.banquo.api.bank.AccountOpResultTypes.AcctOpResult
-import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, BalanceChangeID, ChangeAmount}
+import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, BalanceChangeID, ChangeAmount, XactDescription}
 import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
 import com.appstract.banquo.api.bank.{AcctCreateFailed, AcctOpError, AcctOpFailedInsufficientFunds, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountWriteOps}
-import com.appstract.banquo.api.roach.{BalanceChangeInternal, DbConn, DbEmptyResult}
+import com.appstract.banquo.api.roach.{BalanceChangeDetails, DbConn, DbEmptyResult}
 import com.appstract.banquo.impl.roach.{RoachReader, RoachWriter, SqlEffectMaker}
-
 
 /**
  * These high-level write operations are responsible for their own database commits, error handling, and retry behavior.
@@ -58,10 +57,10 @@ class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 		opWithErrHandling.debug(".makeAccount final result")
 	}
 
-	override def storeBalanceChange(acctID: AccountID, changeAmt: ChangeAmount):
+	override def storeBalanceChange(acctID: AccountID, changeAmt: ChangeAmount, xactDesc : XactDescription):
 									URIO[DbConn, AcctOpResult[BalanceChangeSummary]] = {
 		val OP_NAME = "storeBalanceChange"
-		val prevBalChgJob: URIO[DbConn, DbOpResult[BalanceChangeInternal]] = myRoachReader.selectLastBalanceChange(acctID)
+		val prevBalChgJob: URIO[DbConn, DbOpResult[BalanceChangeDetails]] = myRoachReader.selectLastBalanceChange(acctID)
 		val balChgStoreOp = prevBalChgJob.flatMap(_ match {
 			case Left(balEmpty: DbEmptyResult) => ZIO.succeed(Left(AcctOpFailedNoAccount(OP_NAME, acctID, balEmpty.toString)))
 			case Left(otherErr) => ZIO.succeed(Left(AcctOpError(OP_NAME, acctID, otherErr.toString)))

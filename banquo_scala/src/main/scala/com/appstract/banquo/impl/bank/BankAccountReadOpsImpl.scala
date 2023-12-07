@@ -3,8 +3,8 @@ package com.appstract.banquo.impl.bank
 import com.appstract.banquo.api.bank.AccountOpResultTypes.{AccountHistory, AcctOpResult}
 import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount}
 import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
-import com.appstract.banquo.api.bank.{AccountDetails, AccountOpProblem, AccountSummary, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps}
-import com.appstract.banquo.api.roach.{BalanceChangeInternal, DbConn, DbEmptyResult}
+import com.appstract.banquo.api.bank.{AccountOpProblem, AccountSummary, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps}
+import com.appstract.banquo.api.roach.{AccountDetails, BalanceChangeDetails, DbConn, DbEmptyResult}
 import com.appstract.banquo.impl.roach.RoachReader
 import zio.{RIO, URIO, ZIO}
 
@@ -26,7 +26,7 @@ class BankAccountReadOpsImpl extends BankAccountReadOps {
 		summaryJob
 	}
 
-	private def buildAccountSummary(acctDetails : AccountDetails, balChg : BalanceChangeInternal) : AccountSummary = {
+	private def buildAccountSummary(acctDetails : AccountDetails, balChg : BalanceChangeDetails) : AccountSummary = {
 		AccountSummary(acctDetails.accountID, acctDetails.customerName, acctDetails.customerAddress, balChg.balanceAmt)
 	}
 
@@ -34,7 +34,7 @@ class BankAccountReadOpsImpl extends BankAccountReadOps {
 
 	override def fetchAccountHistory(acctID: AccountID): URIO[DbConn, AcctOpResult[AccountHistory]] = {
 		val OP_NAME = "fetchAccountHistory"
-		val recentChangesJob: URIO[DbConn, DbOpResult[Seq[BalanceChangeInternal]]] =
+		val recentChangesJob: URIO[DbConn, DbOpResult[Seq[BalanceChangeDetails]]] =
 				myRoachReader.selectRecentBalanceChanges(acctID, MAX_CHANGE_RECORDS)
 		val fetchHistoryJob: URIO[DbConn, AcctOpResult[Seq[BalanceChangeSummary]]] =
 			recentChangesJob.map(dbOpRslt => dbOpRslt.fold(

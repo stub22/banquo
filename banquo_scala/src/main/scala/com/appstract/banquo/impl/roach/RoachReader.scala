@@ -2,9 +2,8 @@ package com.appstract.banquo.impl.roach
 
 // TODO: In principle, we should not see these higher level Bank types here in the lower level Roach impl package.
 import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, CustomerAddress, CustomerName}
-import com.appstract.banquo.api.bank.AccountDetails
 import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
-import com.appstract.banquo.api.roach.{BalanceChangeInternal, DbConn, DbEmptyResult, DbOtherError, DbProblem}
+import com.appstract.banquo.api.roach.{AccountDetails, BalanceChangeDetails, DbConn, DbEmptyResult, DbOtherError, DbProblem}
 import zio.{RIO, URIO, ZIO}
 
 import java.sql.{ResultSet => JdbcResultSet}
@@ -49,7 +48,7 @@ trait RoachReader {
 	by using the ordered results from a delegating call to selectRecentBalanceChanges.
 	 */
 
-	def selectLastBalanceChange(acctID : AccountID) : URIO[DbConn, DbOpResult[BalanceChangeInternal]] = {
+	def selectLastBalanceChange(acctID : AccountID) : URIO[DbConn, DbOpResult[BalanceChangeDetails]] = {
 		val stmtArgs = Seq[Any](acctID)
 		val recentChangesJob = selectRecentBalanceChanges(acctID, 10)
 		val naiveLastRecordJob = recentChangesJob.map(dbOpRslt => dbOpRslt.map(balChgSeq => balChgSeq.head))
@@ -71,12 +70,12 @@ completely guaranteed."
 	*/
 	val SELECT_ALL_BAL_CHGS = "SELECT bchg_id, acct_id, chg_flavor, prev_bchg_id, chg_amt, balance, chg_create_time " +
 			"FROM balance_change WHERE acct_id = ? ORDER BY bchg_id DESC LIMIT ?"
-	def selectRecentBalanceChanges(acctID : AccountID, maxRecordCount : Int) : URIO[DbConn, DbOpResult[Seq[BalanceChangeInternal]]] = {
+	def selectRecentBalanceChanges(acctID : AccountID, maxRecordCount : Int) : URIO[DbConn, DbOpResult[Seq[BalanceChangeDetails]]] = {
 		val OP_NAME = "selectRecentBalanceChanges"
 		val stmtParams = Seq[Any](acctID, maxRecordCount)
 
-		val sqlJob: ZIO[DbConn, Throwable, Seq[BalanceChangeInternal]] = mySqlJobMaker.execSqlAndPullRows(SELECT_ALL_BAL_CHGS, stmtParams, grabBalanceChange)
-		val jobWithSizeHandled: RIO[DbConn, DbOpResult[Seq[BalanceChangeInternal]]] = sqlJob.map(balChgSeq => {
+		val sqlJob: ZIO[DbConn, Throwable, Seq[BalanceChangeDetails]] = mySqlJobMaker.execSqlAndPullRows(SELECT_ALL_BAL_CHGS, stmtParams, grabBalanceChange)
+		val jobWithSizeHandled: RIO[DbConn, DbOpResult[Seq[BalanceChangeDetails]]] = sqlJob.map(balChgSeq => {
 			val numBalChgs = balChgSeq.size
 			if (numBalChgs > 0) Right(balChgSeq)
 			else Left(DbEmptyResult(OP_NAME, SELECT_ALL_BAL_CHGS, stmtParams.mkString(", ")))
@@ -86,7 +85,7 @@ completely guaranteed."
 		jobWithErrorHandling
 	}
 
-	private def grabBalanceChange(rs : JdbcResultSet) : BalanceChangeInternal = {
+	private def grabBalanceChange(rs : JdbcResultSet) : BalanceChangeDetails = {
 		val bchgID = rs.getLong(1)
 		val acctID = rs.getString(2)
 		val changeFlavor = rs.getString(3)
@@ -94,7 +93,7 @@ completely guaranteed."
 		val changeAmt = rs.getBigDecimal(5)
 		val balanceAmt = rs.getBigDecimal(6)
 		val createStamp = rs.getTimestamp(7)
-		BalanceChangeInternal(bchgID, acctID, changeFlavor, prevBchgID_opt, changeAmt, balanceAmt, createStamp)
+		BalanceChangeDetails(bchgID, acctID, changeFlavor, prevBchgID_opt, changeAmt, balanceAmt, createStamp)
 	}
 
 }

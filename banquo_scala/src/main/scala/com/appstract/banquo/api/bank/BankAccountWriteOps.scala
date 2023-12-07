@@ -17,6 +17,6 @@ trait BankAccountWriteOps {
 
 	def makeAccount(customerName: String, customerAddress: String, initBal: BalanceAmount): URIO[DbConn, AcctOpResult[AccountID]]
 
-	def storeBalanceChange(acctID: AccountID, changeAmt: ChangeAmount): URIO[DbConn, AcctOpResult[BalanceChangeSummary]]
+	def storeBalanceChange(acctID: AccountID, changeAmt: ChangeAmount, xactDesc : XactDescription): URIO[DbConn, AcctOpResult[BalanceChangeSummary]]
 
 }

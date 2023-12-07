@@ -1,12 +1,12 @@
 package com.appstract.banquo.svc
 
-import com.appstract.banquo.api.bank.AccountOpResultTypes.{AccountHistory, AcctOpResult}
-import com.appstract.banquo.api.bank.{AccountDetails, AccountSummary, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps, BankAccountWriteOps}
-import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount, ChangeAmount}
-import com.appstract.banquo.api.roach.DbConn
 import zio._
 import zio.http._
-import zio.json._
+
+import com.appstract.banquo.api.bank._
+import com.appstract.banquo.api.bank.AccountOpResultTypes.{AccountHistory, AcctOpResult}
+import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, ChangeAmount, XactDescription}
+import com.appstract.banquo.api.roach.DbConn
 
 /*
  * Each inbound HTTP Request should be assigned its own JDBC connection (possibly from some pool).
@@ -81,8 +81,9 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		// This responseJob must always produce an HTTP response.
 		val responseJob: UIO[Response] = wiredAcctHistJob.map(_ match {
 			case Right(acctHistorySeq) => {
-				val txt = s"acctHistorySeq=${acctHistorySeq}"
-				Response.text(txt).withStatus(Status.Ok)
+				val historyJson = OurJsonEncoders.encodeAccountHistory(acctHistorySeq)
+				// val txt = s"acctHistorySeq=${acctHistorySeq}"
+				Response.json(historyJson).withStatus(Status.Ok)
 			}
 			case Left(failedNoAcct: AcctOpFailedNoAccount) => {
 				Response.text(failedNoAcct.toString).withStatus(Status.NotFound)
@@ -95,7 +96,7 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		responseJob.debug(s"${OP_NAME} Response: ")
 
 	}
-	def handlePostTransaction(request : Request) = {
+	def handlePostTransaction(request : Request): UIO[Response] = {
 		// 201 Created: If the transaction is successful it returns the transaction details in JSON format
 		// 400 Bad Request: If the request body is invalid
 		// 404 Not Found: If the account does not exist
@@ -105,24 +106,44 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		// Perhaps these should include the new balance, and the transaction timestamp.
 
 		val OP_NAME = "handlePostTransaction"
-
-		val bodyTxt = request.body.asString.debug("POST /transaction with bodyTxt")
-		val acctID : AccountID = ???
-		val chgAmt : ChangeAmount = ???
-		val bchgJob: URIO[DbConn, AcctOpResult[BalanceChangeSummary]] = accountWriteOps.storeBalanceChange(acctID, chgAmt)
-
-		ZIO.succeed(Response.text("bad request").withStatus(Status.BadRequest))
-
+		val rb: Body = request.body
+		val rbt: Task[String] = rb.asString.debug(".handlePostTransaction bodyTxt")
+		rbt.foldZIO(
+			bodyErr => ZIO.succeed(Response.text(bodyErr.toString).withStatus(Status.BadRequest)),
+			bodyTxt => {
+			val xactInEither = OurJsonDecoders.decodeXactInput(bodyTxt)
+			xactInEither match {
+				case Left(errMsg) => {
+					val respTxt = Response.text(s"Json extraction failed, \nerrMsg=[${errMsg}], \ninput=[${bodyTxt}]")
+					ZIO.succeed(respTxt.withStatus(Status.BadRequest))
+				}
+				case Right(xactIn) => {
+					val acctID: AccountID = xactIn.account_id
+					val chgAmt: ChangeAmount = xactIn.amount
+					val xactDesc : XactDescription = xactIn.description
+					val bchgJob: URIO[DbConn, AcctOpResult[BalanceChangeSummary]] =
+							accountWriteOps.storeBalanceChange(acctID, chgAmt, xactDesc)
+					val wiredBchgJob = bchgJob.provideLayer(dbConnLayer).catchAll(thrown => {
+						// Most likely we got an error in the DB connection opening process.
+						ZIO.succeed(Left(AcctOpError(OP_NAME, acctID, s"Exception: ${thrown.toString}")))
+					})
+					wiredBchgJob.map(_ match {
+						case Right(bcSumm) => {
+							val bcSummJson = OurJsonEncoders.encodeBalanceSummary(bcSumm)
+							Response.json(bcSummJson).withStatus(Status.Created)
+						}
+						case Left(failedNoAcct : AcctOpFailedNoAccount) => {
+							Response.text(failedNoAcct.toString).withStatus(Status.NotFound)
+						}
+						case Left(failedInsuff : AcctOpFailedInsufficientFunds) => {
+							Response.text(failedInsuff.toString).withStatus(Status.UnprocessableEntity)
+						}
+						case Left(otherErr) => {
+							Response.text(otherErr.toString).withStatus(Status.InternalServerError)
+						}
+					})
+				}
+			}
+		})
 	}
-}
-object OurJsonEncoders {
-	def encodeAccountSummary(acctSummary : AccountSummary) : String = {
-		implicit val encoder: JsonEncoder[AccountSummary] = DeriveJsonEncoder.gen[AccountSummary]
-		acctSummary.toJson
-	}
-//			implicit val decoder: JsonDecoder[User] =
-//				DeriveJsonDecoder.gen[User]
-//		}
-
-
 }
