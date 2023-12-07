@@ -52,7 +52,7 @@ class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 				dbError => Left(AcctCreateFailed(dbError.toString)), 	// Error case
 				resultPair => Right(resultPair._1)))					// Success case
 
-		// Attach a handler for any not-yet-mapped exceptions in any of the above stages of INSERT, INSERT, COMMIT.
+		// Attach a handler for any not-yet-mapped exceptions generated during commit.
 		val opWithErrHandling: URIO[DbConn, Either[AcctCreateFailed, AccountID]] =
 			opWithSimpleResult.catchAll(t => ZIO.succeed(Left(AcctCreateFailed(t.toString))))
 		opWithErrHandling.debug(".makeAccount final result")
@@ -62,24 +62,27 @@ class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 									URIO[DbConn, AcctOpResult[BalanceChangeSummary]] = {
 		val OP_NAME = "storeBalanceChange"
 		val prevBalChgJob: URIO[DbConn, DbOpResult[BalanceChangeInternal]] = myRoachReader.selectLastBalanceChange(acctID)
-		prevBalChgJob.flatMap(_ match {
-			case Left(balEmpty : DbEmptyResult) => ZIO.succeed(Left(AcctOpFailedNoAccount(OP_NAME, acctID, balEmpty.toString)))
+		val balChgStoreOp = prevBalChgJob.flatMap(_ match {
+			case Left(balEmpty: DbEmptyResult) => ZIO.succeed(Left(AcctOpFailedNoAccount(OP_NAME, acctID, balEmpty.toString)))
 			case Left(otherErr) => ZIO.succeed(Left(AcctOpError(OP_NAME, acctID, otherErr.toString)))
 			case Right(prevBalChg) => {
 				val nxtBalAmt = prevBalChg.balanceAmt.+(changeAmt)
 				if (nxtBalAmt.sign >= 0) {
 					val insertResult: URIO[DbConn, DbOpResult[BalanceChangeSummary]] =
-								myRoachWriter.insertBalanceChange(acctID, prevBalChg.changeID, changeAmt, nxtBalAmt)
+						myRoachWriter.insertBalanceChange(acctID, prevBalChg.changeID, changeAmt, nxtBalAmt)
 					insertResult.map(_.fold(
 						dbErr => Left(AcctOpError(OP_NAME, acctID, dbErr.toString)),
 						chgSumm => Right(chgSumm)
 					))
 				}
 				else ZIO.succeed(Left(AcctOpFailedInsufficientFunds(OP_NAME, acctID,
-							s"previousBalance=${prevBalChg}, change=${changeAmt}")))
+					s"previousBalance=${prevBalChg}, change=${changeAmt}")))
 			}
 		})
-
+		val opWithCommit = balChgStoreOp <* commitJob
+		val opWithErrHandling: URIO[DbConn, AcctOpResult[BalanceChangeSummary]] =
+			opWithCommit.catchAll(t => ZIO.succeed(Left(AcctOpError(OP_NAME, acctID, t.toString))))
+		opWithErrHandling
 	}
 
 }
