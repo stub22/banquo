@@ -4,16 +4,16 @@ Banquo is a prototype implementation of a bank account ledger service with the p
 
 The design relies on the scalable strong consistency features of Cockroach DB, which is protocol compatible with Postgresql.  
 
-The Banquo HTTP service is implemented in Functional Scala (v. 2.13) using the following libraries:
+The Banquo HTTP service is implemented in Functional Scala (v. 2.13) using the following main libraries:
   * ZIO 2.x
   * ZIO-HTTP
   * Postgres JDBC driver
 
-Banquo is designed to be run as a set of parallel stateless service instances, deployed and managed by  Kubernetes.  As of 2023-12-06, Banquo has been tested using only a single service instance launched in a Docker Compose setup, using a single-server instance of the free edition of Cockroach DB version ____.
+Banquo is designed to be run as a set of parallel stateless service instances, deployed and managed by  Kubernetes.  As of 2023-12-06, Banquo has been tested using only a single service instance, using a single-server instance of the free desktop edition of CockroachDB core version 23.1.12.
 
-Cockroach DB may be deployed as a scalable, distributed database under Kubernetes (commercial license required), and is also offered as a commercial cloud-hosted service.
+CockroachDB may be deployed as a scalable, distributed database under Kubernetes (commercial license required), and is also offered as a commercial cloud-hosted service.
 
-### Persistent Store Design Overview
+### Persistent Store Design 
 
 The core functionality of Banquo is implemented by the SQL table called `balance_change`.
 
@@ -73,8 +73,9 @@ Build scala code with
 
 To launch the Banquo HTTP service on port 8484
 
-```sbt run``` 
+```sbt run```
 
+Tested with:  OpenJDK 11.0.19 (GraalVM) on Microsoft Windows 10
 
 ### Container Build and Launch
 Docker setup is not done yet.
