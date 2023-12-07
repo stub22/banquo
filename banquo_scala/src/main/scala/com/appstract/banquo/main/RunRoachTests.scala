@@ -2,7 +2,7 @@ package com.appstract.banquo.main
 
 import com.appstract.banquo.api.DbConn
 import com.appstract.banquo.impl.bank.BankAccountWriteOpsImpl
-import com.appstract.banquo.impl.roach.{RoachDbConnLayers, RoachSchema, RoachWriter, SqlExecutor}
+import com.appstract.banquo.impl.roach.{RoachDbConnLayers, RoachSchema, RoachWriter, SqlEffectMaker}
 import zio.{Scope, ZIO, ZIOAppArgs, ZIOAppDefault}
 
 object RunRoachTests extends ZIOAppDefault {
@@ -34,7 +34,7 @@ object RunRoachTests extends ZIOAppDefault {
 	}
 
 
-	val mySqlExec = new SqlExecutor
+	val mySqlExec = new SqlEffectMaker
 	val schema = RoachSchema
 	def setup = {
 		val schemaCreateJob = schema.createTablesAsNeeded

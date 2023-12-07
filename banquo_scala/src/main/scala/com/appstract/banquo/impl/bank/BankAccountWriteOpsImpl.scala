@@ -2,9 +2,9 @@ package com.appstract.banquo.impl.bank
 
 import zio.{URIO, ZIO}
 import com.appstract.banquo.api.AccountOpResultTypes.AcctOpResult
-import com.appstract.banquo.api.{AcctCreateFailed, AcctOpError, BalanceChangeSummary, BankAccountWriteOps, DbConn, DbProblem}
+import com.appstract.banquo.api.{AcctCreateFailed, AcctOpError, BalanceChangeSummary, BankAccountWriteOps, DbConn}
 import com.appstract.banquo.api.BankScalarTypes.{AccountId, BalanceAmount, BalanceChangeId, ChangeAmount}
-import com.appstract.banquo.impl.roach.{RoachReader, RoachWriter, SqlExecutor}
+import com.appstract.banquo.impl.roach.{RoachReader, RoachWriter, SqlEffectMaker}
 
 
 /**
@@ -14,9 +14,9 @@ import com.appstract.banquo.impl.roach.{RoachReader, RoachWriter, SqlExecutor}
 class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 	val myRoachWriter = new RoachWriter {}
 	val myRoachReader = new RoachReader {}
-	private val mySqlExec = new SqlExecutor
-	private val commitJob: ZIO[DbConn, Throwable, Unit] = mySqlExec.execCommit()
 
+	private val mySqlJobMaker = new SqlEffectMaker
+	private val commitJob: ZIO[DbConn, Throwable, Unit] = mySqlJobMaker.execCommit()
 
 	override def makeAccount(customerName: String, customerAddress: String, initBal: BalanceAmount):
 				URIO[DbConn, AcctOpResult[AccountId]] = {

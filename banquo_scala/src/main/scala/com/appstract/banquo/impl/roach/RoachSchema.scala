@@ -41,7 +41,7 @@ object RoachSchema {
   			| chg_create_time TIMESTAMPTZ NOT NULL DEFAULT NOW()) """.stripMargin
 
 
-	val mySqlExec = new SqlExecutor
+	val mySqlExec = new SqlEffectMaker
 
 	def createTablesAsNeeded: ZIO[DbConn, Throwable, Unit] = {
 		val z1 = mySqlExec.execUpdateNoResult(CREATE_TABLE_ACCOUNT).debug("CREATE_TABLE_ACCOUNT")

@@ -25,8 +25,7 @@ The essence of the design is embodied in this Scala method, which is used to sto
 def insertBalanceChange(acctId: AccountId, prevChgId: BalanceChangeId, chgAmt: ChangeAmount, balAmt: BalanceAmount): ZIO[DbConn, Throwable, BalanceChangeId]
 ```
 
-
-
+Our Scala code accesses the JDBC driver directly, which ensures we have complete control over both DB connections and SQL Transactions.
 
 #### Schema of the balance_change table
 

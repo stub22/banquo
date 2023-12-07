@@ -11,14 +11,14 @@ import zio.ZIO
  */
 trait RoachWriter {
 	val mySchema = RoachSchema
-	val mySqlExec = new SqlExecutor
+	val mySqlExec = new SqlEffectMaker
 
 	val INSERT_ACCT = "INSERT INTO account (cust_name, cust_address) VALUES (?, ?) RETURNING acct_id"
 
 	def insertAccount(customerName: String, customerAddress: String): ZIO[DbConn, Throwable, AccountId] = {
 		val stmtArgs = Seq[Any](customerName, customerAddress)
-		val z1 = mySqlExec.execSqlAndPullOneString(INSERT_ACCT, stmtArgs)
-		z1.debug(".insertAccount result")
+		val sqlJob = mySqlExec.execSqlAndPullOneString(INSERT_ACCT, stmtArgs)
+		sqlJob.debug(".insertAccount result")
 	}
 
 	val INSERT_INIT_BAL =
@@ -27,8 +27,8 @@ trait RoachWriter {
 
 	def insertInitialBalance(acctId: AccountId, initAmt: BalanceAmount): ZIO[DbConn, Throwable, BalanceChangeId] = {
 		val stmtArgs = Seq[Any](acctId, mySchema.BCHG_FLAVOR_INITIAL, initAmt, initAmt)
-		val z1 = mySqlExec.execSqlAndPullOneLong(INSERT_INIT_BAL, stmtArgs)
-		z1.debug(".insertInitialBalance result")
+		val sqlJob = mySqlExec.execSqlAndPullOneLong(INSERT_INIT_BAL, stmtArgs)
+		sqlJob.debug(".insertInitialBalance result")
 	}
 
 	val INSERT_BAL_CHG =
@@ -38,7 +38,7 @@ trait RoachWriter {
 	def insertBalanceChange(acctId: AccountId, prevChgId: BalanceChangeId, chgAmt: ChangeAmount, balAmt: BalanceAmount):
 			ZIO[DbConn, Throwable, BalanceChangeId] = {
 		val stmtArgs = Seq[Any](acctId, mySchema.BCHG_FLAVOR_FLOW, prevChgId, chgAmt, balAmt)
-		val z1 = mySqlExec.execSqlAndPullOneLong(INSERT_BAL_CHG, stmtArgs)
-		z1.debug(".insertBalanceChange result")
+		val sqlJob = mySqlExec.execSqlAndPullOneLong(INSERT_BAL_CHG, stmtArgs)
+		sqlJob.debug(".insertBalanceChange result")
 	}
 }
