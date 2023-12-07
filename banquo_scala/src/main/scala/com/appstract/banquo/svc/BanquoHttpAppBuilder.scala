@@ -45,8 +45,9 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		// This responseJob must always produce an HTTP response.
 		val responseJob: UIO[Response] = wiredAcctInfJob.map(_ match {
 			case Right(acctSummary) => {
-				val txt = s"acctSummary=${acctSummary}"
-				Response.text(txt).withStatus(Status.Ok)
+				val acctSummJson = OurJsonEncoders.encodeAccountSummary(acctSummary)
+				// val txt = s"acctSummary=${acctSummary}"
+				Response.json(acctSummJson).withStatus(Status.Ok)
 			}
 			case Left(failedNoAcct : AcctOpFailedNoAccount)	=> {
 				Response.text(failedNoAcct.toString).withStatus(Status.NotFound)
@@ -58,6 +59,7 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 
 		responseJob.debug(s"${OP_NAME} Response: ")
 	}
+
 
 	def handleGetTransactionHistory(acctId : AccountID): UIO[Response] = {
 		// 200 OK: Returns the list of transaction history for the specified bank account in JSON format.
@@ -112,4 +114,15 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		ZIO.succeed(Response.text("bad request").withStatus(Status.BadRequest))
 
 	}
+}
+object OurJsonEncoders {
+	def encodeAccountSummary(acctSummary : AccountSummary) : String = {
+		implicit val encoder: JsonEncoder[AccountSummary] = DeriveJsonEncoder.gen[AccountSummary]
+		acctSummary.toJson
+	}
+//			implicit val decoder: JsonDecoder[User] =
+//				DeriveJsonDecoder.gen[User]
+//		}
+
+
 }
