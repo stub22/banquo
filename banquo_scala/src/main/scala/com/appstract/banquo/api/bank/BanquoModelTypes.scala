@@ -16,7 +16,7 @@ case class AccountSummary(accountID : AccountID, customerName: CustomerName, cus
 
 // DbTimestamp is not trivially JSON-encodable via DeriveEncoder, so we made createTimestampTxt a plain String.
 case class BalanceChangeSummary(acctID: AccountID, changeAmt: ChangeAmount, balanceAmt: BalanceAmount,
-						createTimestampTxt : String)
+								createTimestampTxt : String, xactDescription_opt: Option[XactDescription])
 
 trait AccountOpProblem
 case class AcctOpFailedNoAccount(opName : String, accountID: AccountID, details : String) extends AccountOpProblem

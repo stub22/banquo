@@ -69,7 +69,7 @@ class BankAccountWriteOpsImpl extends BankAccountWriteOps {
 				val nxtBalAmt = prevBalChg.balanceAmt.+(changeAmt)
 				if (nxtBalAmt.sign >= 0) {
 					val insertResult: URIO[DbConn, DbOpResult[BalanceChangeSummary]] =
-						myRoachWriter.insertBalanceChange(acctID, prevBalChg.changeID, changeAmt, nxtBalAmt)
+						myRoachWriter.insertBalanceChange(acctID, prevBalChg.changeID, changeAmt, nxtBalAmt, xactDesc)
 					insertResult.map(_.fold(
 						dbErr => Left(AcctOpError(OP_NAME, acctID, dbErr.toString)),
 						chgSumm => Right(chgSumm)

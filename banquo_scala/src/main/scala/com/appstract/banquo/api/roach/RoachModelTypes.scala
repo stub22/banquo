@@ -12,8 +12,8 @@ case class AccountDetails(accountID: AccountID, customerName: CustomerName, cust
 
 case class BalanceChangeDetails(changeID : BalanceChangeID, acctID : AccountID, changeFlavor : ChangeFlavor,
 								prevChangeID_opt : Option[BalanceChangeID], changeAmt: ChangeAmount,
-								balanceAmt : BalanceAmount, createTimestamp: DbTimestamp) {
-	def toSummary = BalanceChangeSummary(acctID, changeAmt, balanceAmt, createTimestamp.toString)
+								balanceAmt : BalanceAmount, createTimestamp: DbTimestamp, xactDescription: XactDescription) {
+	def toSummary = BalanceChangeSummary(acctID, changeAmt, balanceAmt, createTimestamp.toString, Option(xactDescription))
 }
 
 
