@@ -34,7 +34,7 @@ object RunBanquoHttpApp extends ZIOAppDefault {
 		dbSetup *> serverApp
 	}
 	def setupDatabaseIfNeeded = {
-		val dbSetupJob: ZIO[DbConn, Throwable, Unit] = RunRoachTests.setup
+		val dbSetupJob: ZIO[DbConn, Throwable, Unit] = RunRoachTests.setupSchema
 		dbSetupJob
 	}
 }

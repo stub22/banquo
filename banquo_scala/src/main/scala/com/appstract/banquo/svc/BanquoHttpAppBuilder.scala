@@ -1,7 +1,7 @@
 package com.appstract.banquo.svc
 
 import com.appstract.banquo.api.AccountOpResultTypes.{AccountHistory, AcctOpResult}
-import com.appstract.banquo.api.BankScalarTypes.{AccountId, BalanceAmount, ChangeAmount}
+import com.appstract.banquo.api.BankScalarTypes.{AccountID, BalanceAmount, ChangeAmount}
 import com.appstract.banquo.api.{AccountDetails, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps, BankAccountWriteOps, DbConn}
 import com.appstract.banquo.impl.bank.BankAccountWriteOpsImpl
 import zio._
@@ -27,7 +27,7 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 
 		}
 	}
-	def handleGetAccountInfo(acctId : AccountId): UIO[Response] = {
+	def handleGetAccountInfo(acctId : AccountID): UIO[Response] = {
 		// 200 OK: Returns the balance and user details of the specified bank account in JSON format.
 		// 404 Not Found: If the account does not exist.
 
@@ -59,7 +59,7 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		responseJob.debug(s"${OP_NAME} Response: ")
 	}
 
-	def handleGetTransactionHistory(acctId : AccountId): UIO[Response] = {
+	def handleGetTransactionHistory(acctId : AccountID): UIO[Response] = {
 		// 200 OK: Returns the list of transaction history for the specified bank account in JSON format.
 		// 404 Not Found: If the account does not exist.
 
@@ -102,7 +102,7 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		val OP_NAME = "handlePostTransaction"
 
 		val bodyTxt = request.body.asString.debug("POST /transaction with bodyTxt")
-		val acctID : AccountId = ???
+		val acctID : AccountID = ???
 		val chgAmt : ChangeAmount = ???
 		val bchgJob: URIO[DbConn, AcctOpResult[BalanceChangeSummary]] = accountWriteOps.storeBalanceChange(acctID, chgAmt)
 

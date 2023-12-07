@@ -1,7 +1,8 @@
 package com.appstract.banquo.impl.roach
 
-import com.appstract.banquo.api.DbConn
-import zio.{RIO, Task, ZIO}
+import com.appstract.banquo.api.{DbConn, DbEmptyResult, DbOtherError, DbProblem}
+import com.appstract.banquo.api.DbOpResultTypes.DbOpResult
+import zio.{RIO, Task, URIO, ZIO}
 
 import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData}
 import scala.collection.mutable.ArrayBuffer
@@ -19,6 +20,8 @@ class SqlEffectMaker {
 	 *
 	 * This implementation uses mutable data features of the PreparedStatement and ResultSet.
 	 * It also assumes that all result row-sets fit easily in memory!
+	 *
+	 * Note that execSqlAndPullRows may produce any error as a Throwable, as shown in the result type.
 	 */
 
 	def execSqlAndPullRows[Row](prepStmtTxt : String, params: Seq[Any], rowGrabber : Function[ResultSet, Row]):
@@ -57,18 +60,30 @@ class SqlEffectMaker {
 		}).debug(".execSqlAndPullRows result")
 	}
 
-	def execSqlAndPullOneRow[Row](prepStmtTxt: String, params: Seq[Any], rowGrabber: Function[ResultSet, Row]): RIO[DbConn, Row] = {
+	/*
+	All errors are handled, so the ZIO error type is Nothing.
+	type URIO[-R, +A] = ZIO[R, Nothing, A]
+	 */
+	def execSqlAndPullOneRow[Row](prepStmtTxt: String, params: Seq[Any], rowGrabber: Function[ResultSet, Row]):
+			URIO[DbConn, DbOpResult[Row]] = {
+		val OP_NAME = "execSqlAndPullOneRow"
 		val execJob = execSqlAndPullRows(prepStmtTxt, params, rowGrabber)
-		execJob.map(rowSeq => {
-			assert(rowSeq.size == 1)
-			rowSeq.head
+		val jobWithSizeHandled: ZIO[DbConn, Throwable, Either[DbProblem, Row]] = execJob.map(rowSeq => {
+			val rowsetSize = rowSeq.size
+			rowsetSize match {
+				case 1 => Right(rowSeq.head)
+				case 0 => Left(DbEmptyResult(OP_NAME, prepStmtTxt, params.mkString(", ")))
+				case _ => Left(DbOtherError(OP_NAME, prepStmtTxt, params.mkString(", "), s"Expected 1 result but got ${rowsetSize}"))
+			}
 		})
+		jobWithSizeHandled.catchAll(thrown =>
+			ZIO.succeed(Left(DbOtherError(OP_NAME, prepStmtTxt, params.mkString(", "), thrown.toString))))
 	}
-	def execSqlAndPullOneString(prepStmtTxt : String, params: Seq[Any]): RIO[DbConn, String] = {
+	def execSqlAndPullOneString(prepStmtTxt : String, params: Seq[Any]): URIO[DbConn, DbOpResult[String]] = {
 		val puller = (rs : ResultSet) => (rs.getString(1)) // JDBC columns use 1-based indexing
 		execSqlAndPullOneRow[(String)](prepStmtTxt, params, puller)
 	}
-	def execSqlAndPullOneLong(prepStmtTxt: String, params: Seq[Any]): RIO[DbConn, Long] = {
+	def execSqlAndPullOneLong(prepStmtTxt: String, params: Seq[Any]): URIO[DbConn, DbOpResult[Long]] = {
 		val puller = (rs: ResultSet) => (rs.getLong(1)) // JDBC columns use 1-based indexing
 		execSqlAndPullOneRow[(Long)](prepStmtTxt, params, puller)
 	}

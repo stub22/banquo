@@ -5,29 +5,32 @@ import java.sql.{Timestamp => JsqlTimestamp}
 private trait BanquoModelTypes
 
 object BankScalarTypes {
-	type AccountId = String
+	type AccountID = String
 	type CustomerName = String
 	type CustomerAddress = String
-	type BalanceChangeId = Long
+	type Timestamp = JsqlTimestamp
+
+	type BalanceChangeID = Long
 	type ChangeAmount = BigDecimal
 	type BalanceAmount = BigDecimal
-	type Timestamp = JsqlTimestamp
+	type ChangeFlavor = String // TODO:  This is an SQL enum, which we might map into our Scala types in various ways.
 }
 
 import com.appstract.banquo.api.BankScalarTypes._
 
-case class AccountDetails(acctID : AccountId, customerName: CustomerName, customerAddress: CustomerAddress, createTimestamp: Timestamp)
+case class AccountDetails(accountID : AccountID, customerName: CustomerName, customerAddress: CustomerAddress, createTimestamp: Timestamp)
 
-case class BalanceChange(changeId : BalanceChangeId, acctID : AccountId, prevChangeId_opt : Option[BalanceChangeId],
-						 changeAmt: ChangeAmount, balanceAmt : BalanceAmount, createTimestamp: Timestamp)
+case class BalanceChange(changeId : BalanceChangeID, acctID : AccountID, changeFlavor : ChangeFlavor,
+						 prevChangeID_opt : Option[BalanceChangeID], changeAmt: ChangeAmount, balanceAmt : BalanceAmount,
+						 createTimestamp: Timestamp)
 
-case class BalanceChangeSummary(acctID: AccountId, changeAmt: ChangeAmount, balanceAmt: BalanceAmount, createTimestamp: Timestamp)
+case class BalanceChangeSummary(acctID: AccountID, changeAmt: ChangeAmount, balanceAmt: BalanceAmount, createTimestamp: Timestamp)
 
 trait AccountOpProblem
-case class AcctOpFailedNoAccount(opName : String, accountId: AccountId, details : String) extends AccountOpProblem
-case class AcctOpFailedInsufficientFunds(opName : String, accountId: AccountId, details : String) extends AccountOpProblem
+case class AcctOpFailedNoAccount(opName : String, accountID: AccountID, details : String) extends AccountOpProblem
+case class AcctOpFailedInsufficientFunds(opName : String, accountID: AccountID, details : String) extends AccountOpProblem
 case class AcctCreateFailed(details : String) extends AccountOpProblem
-case class AcctOpError(opName : String, accountId: AccountId, details : String) extends AccountOpProblem
+case class AcctOpError(opName : String, accountId: AccountID, details : String) extends AccountOpProblem
 
 object AccountOpResultTypes {
 	type AcctOpResult[X] = Either[AccountOpProblem, X]

@@ -15,8 +15,8 @@ import com.appstract.banquo.api.BankScalarTypes._
 
 trait BankAccountWriteOps {
 
-	def makeAccount(customerName: String, customerAddress: String, initBal: BalanceAmount): URIO[DbConn, AcctOpResult[AccountId]]
+	def makeAccount(customerName: String, customerAddress: String, initBal: BalanceAmount): URIO[DbConn, AcctOpResult[AccountID]]
 
-	def storeBalanceChange(acctID: AccountId, changeAmt: ChangeAmount): URIO[DbConn, AcctOpResult[BalanceChangeSummary]]
+	def storeBalanceChange(acctID: AccountID, changeAmt: ChangeAmount): URIO[DbConn, AcctOpResult[BalanceChangeSummary]]
 
 }
