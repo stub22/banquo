@@ -22,9 +22,6 @@ trait RoachReader {
 		val stmtParams = Seq[Any](acctID)
 		val sqlJob: URIO[DbConn, DbOpResult[AccountDetails]] =
 				mySqlJobMaker.execSqlAndPullOneRow(SELECT_ACCT_DETAILS, stmtParams, grabAccountDetails)
-
-		// Redundant sanity check - make sure the acctID matches!
-		// 	val jobWithSanityCheck = sqlJob.map(acctDetails => {assert(acctDetails.accountID == acctID); acctDetails})
 		sqlJob
 	}
 

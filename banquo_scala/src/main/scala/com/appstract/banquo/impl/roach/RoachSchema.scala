@@ -6,8 +6,7 @@ import zio.ZIO
 
 
 object RoachSchema {
-	val TABLE_ACCOUNT = "account"
-	val COL_ACCT_ID = "acct_id"
+
 	val CREATE_TABLE_ACCOUNT =
 		"""CREATE TABLE IF NOT EXISTS account (
 			| acct_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -20,16 +19,14 @@ object RoachSchema {
 	val BCHG_FLAVOR_INITIAL = "INITIAL"
 	val BCHG_FLAVOR_FLOW = "FLOW"
 
-	val COL_BCHG_ID = "bchg_id"
 	// prev_bchg_id should be NULL when bal_chg_flavor is INITIAL.
 	// UNIQUE constraint on prev_bchg_id should prevent forking by simultaneous transactions on the same account.
-	// (We expect one of the transactions to fail.
-	// This failure should actually happen even without the UNIQUE constraint, assuming Cockroach SERIALIZABLE fails on
-	// phantom reads).
+	// (We expect one of the transactions to fail. This failure should actually happen even without the UNIQUE
+	// constraint, assuming Cockroach SERIALIZABLE fails on phantom reads).
 	// These INT8 values are 64 bits, so we bind them to Java/Scala Long.
 	// TODO: Consider additional indexes to improve read performance, with some tradeoff in storage cost and write performance.
 	// TODO: Consider Foreign-key constraint on link to account.
-	val COL_PREV_BCHG_ID = "prev_bchg_id"
+
 	val CREATE_TABLE_BALANCE_CHG =
 		"""CREATE TABLE IF NOT EXISTS balance_change (
  			| bchg_id INT8 PRIMARY KEY DEFAULT unique_rowid(),
@@ -38,11 +35,13 @@ object RoachSchema {
  			| prev_bchg_id INT8 UNIQUE,
  			| chg_amt DECIMAL NOT NULL,
  			| balance DECIMAL NOT NULL,
+ 			| description STRING,
   			| chg_create_time TIMESTAMPTZ NOT NULL DEFAULT NOW()) """.stripMargin
 
 
 	val mySqlExec = new SqlEffectMaker
 
+	// These changes will NOT be permanent unless .commit is sent to the sqlConn before it is closed.
 	def createTablesAsNeeded: ZIO[DbConn, Throwable, Unit] = {
 		val z1 = mySqlExec.execUpdateNoResult(CREATE_TABLE_ACCOUNT).debug("CREATE_TABLE_ACCOUNT")
 		val z2 = mySqlExec.execUpdateNoResult(CREATE_ENUM_BAL_CHG_FLAVOR).debug("CREATE_ENUM_BAL_CHG_FLAVOR")

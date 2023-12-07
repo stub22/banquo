@@ -1,13 +1,12 @@
 package com.appstract.banquo.impl.bank
 
+import zio.{URIO, ZIO}
 import com.appstract.banquo.api.bank.AccountOpResultTypes.{AccountHistory, AcctOpResult}
-import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID, BalanceAmount}
+import com.appstract.banquo.api.bank.BankScalarTypes.{AccountID}
 import com.appstract.banquo.api.roach.DbOpResultTypes.DbOpResult
-import com.appstract.banquo.api.bank.{AccountOpProblem, AccountSummary, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps}
+import com.appstract.banquo.api.bank.{AccountSummary, AcctOpError, AcctOpFailedNoAccount, BalanceChangeSummary, BankAccountReadOps}
 import com.appstract.banquo.api.roach.{AccountDetails, BalanceChangeDetails, DbConn, DbEmptyResult}
 import com.appstract.banquo.impl.roach.RoachReader
-import zio.{RIO, URIO, ZIO}
-
 
 class BankAccountReadOpsImpl extends BankAccountReadOps {
 	val myRoachReader = new RoachReader {}
@@ -32,6 +31,9 @@ class BankAccountReadOpsImpl extends BankAccountReadOps {
 
 	val MAX_CHANGE_RECORDS = 200
 
+	/***
+	 * Fetches in memory sequence of up to MAX_CHANGE_RECORDS of history, with most recent record first.
+	 */
 	override def fetchAccountHistory(acctID: AccountID): URIO[DbConn, AcctOpResult[AccountHistory]] = {
 		val OP_NAME = "fetchAccountHistory"
 		val recentChangesJob: URIO[DbConn, DbOpResult[Seq[BalanceChangeDetails]]] =
@@ -39,6 +41,8 @@ class BankAccountReadOpsImpl extends BankAccountReadOps {
 		val fetchHistoryJob: URIO[DbConn, AcctOpResult[Seq[BalanceChangeSummary]]] =
 			recentChangesJob.map(dbOpRslt => dbOpRslt.fold(
 				dbErr => dbErr match {
+					// An account should always have at least one BalanceChange record (for its initial balance),
+					// so when we get an empty result, we believe that means there is no account.
 					case empty: DbEmptyResult => Left(AcctOpFailedNoAccount(OP_NAME, acctID, empty.toString))
 					case other => Left(AcctOpError(OP_NAME, acctID, other.toString))
 				},

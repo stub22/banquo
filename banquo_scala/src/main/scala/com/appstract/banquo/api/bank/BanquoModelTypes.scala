@@ -2,18 +2,21 @@ package com.appstract.banquo.api.bank
 
 import com.appstract.banquo.api.bank.BankScalarTypes._
 
-
+/**
+ * Our input type(s) received by the HTTP service:
+ **/
 
 case class XactInput(account_id: AccountID, amount: ChangeAmount, description: XactDescription)
+
 /**
- * Our result types reported to the HTTP service.
+ * Our result types reported to the HTTP service:
  */
 
 case class AccountSummary(accountID : AccountID, customerName: CustomerName, customerAddress: CustomerAddress, balanceAmt: BalanceAmount)
 
-
+// DbTimestamp is not trivially JSON-encodable via DeriveEncoder, so we made createTimestampTxt a plain String.
 case class BalanceChangeSummary(acctID: AccountID, changeAmt: ChangeAmount, balanceAmt: BalanceAmount,
-						createTimestampTxt : String) // : DbTimestamp is not trivially JSON-encodable for DeriveEncoder.
+						createTimestampTxt : String)
 
 trait AccountOpProblem
 case class AcctOpFailedNoAccount(opName : String, accountID: AccountID, details : String) extends AccountOpProblem
