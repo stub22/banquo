@@ -22,9 +22,7 @@ This table functions like an append-only log, and in principle could be replaced
   * The current Banquo implementation never mutates any rows of the `balance_change` table.
   * Our Scala code accesses the JDBC driver directly, which ensures we have complete control over both DB connections and SQL Transactions.
 
-
-
-#### Schema and concurrency design of the `balance_change` table
+#### Schema and Concurrency Design of the `balance_change` table
 
 The column schema is as follows.  
 Notice that bchg_id is automatically generated as a mostly-increasing integer.
@@ -38,6 +36,7 @@ Notice that bchg_id is automatically generated as a mostly-increasing integer.
   prev_bchg_id    | INT8                            |      t      | NULL           |
   chg_amt         | DECIMAL                         |      f      | NULL           |
   balance         | DECIMAL                         |      f      | NULL           |
+  description     | STRING                          |      t      | NULL           |
   chg_create_time | TIMESTAMPTZ                     |      f      | now()          |
 ```
 
@@ -52,13 +51,15 @@ The table has the following constraints
 With the above schema in mind, the essence of the Banquo design is illustrated by this Scala method signature, which is used to store all account balance changes (excluding the initial balance for an account).
 	
 ```
-def insertBalanceChange(acctId: AccountId, prevChgId: BalanceChangeId, chgAmt: ChangeAmount, balAmt: BalanceAmount): ZIO[DbConn, Throwable, BalanceChangeId]
+def insertBalanceChange(acctID: AccountID, prevChgID: BalanceChangeID, chgAmt: ChangeAmount, 
+                        balAmt: BalanceAmount, xactDesc : XactDescription): 
+                        URIO[DbConn, DbOpResult[BalanceChangeSummary]] 
 ```
 
-Note the linkage of each BalanceChange to a previous (immutable!) BalanceChange record.
-Also note that the UNIQUE constraint on prev_bchg_id ensures that each BalanceChange record may 
+Note the linkage by `prevChgID` of each `BalanceChange` to a previous (immutable!) BalanceChange record.
+Also note that the `UNIQUE` constraint on `prev_bchg_id` ensures that each BalanceChange record may 
 only be used **once** as a previous balance.  This constraint ensures that we will grow an unforked 
-chain of balance-change operations for each account. 
+chain of BalanceChange records for each account. 
 
 This constraint comes with its own storage and write-performance costs (the cost of checking and storing  the UNIQUE index on prev_bchg_id).  Given the serializable transaction model of Cockroach DB, this
 index-based approach may not be strictly necessary.  (We could possibly prevent account balances from 
@@ -66,5 +67,14 @@ forking using only phantom-read isolation between competing transactions).  Howe
 and understandable mechanism that delivers the functionality we need for the Banquo prototype.
 
 ### Building and Testing Scala Code
+Build scala code with
+
+```sbt clean compile```
+
+To launch the Banquo HTTP service on port 8484
+
+```sbt run``` 
+
 
 ### Container Build and Launch
+Docker setup is not done yet.

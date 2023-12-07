@@ -46,5 +46,5 @@ trait RoachDbConnOps {
 
 object RoachDbConnLayers {
 	val myConnOps = new RoachDbConnOps {}
-	val dbcLayer01: ZLayer[Any, Throwable, DbConn] = ZLayer.scoped(myConnOps.scopedConn(RoachDataSources.makePGDS))
+	val dbcLayer01: ZLayer[Any, Throwable, DbConn] = ZLayer.scoped(myConnOps.scopedConn(RoachDataSources.makePGDataSource))
 }
