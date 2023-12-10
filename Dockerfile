@@ -9,5 +9,5 @@ WORKDIR /opt/japp/banquo
 # Document the hardcoded port that banquo service listens on. 
 EXPOSE 8484
 
-# USER sbtuser
+# TODO:  Should run as   sbtuser   instead of default (root!) user
 CMD ["sbt", "clean", "run"]

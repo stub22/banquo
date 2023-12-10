@@ -32,6 +32,10 @@ object RunBanquoHttpApp extends ZIOAppDefault {
 
 		val serverApp = appServiceNeedsServer.provide(httpServer)
 
+		// FIXME:  Table creation should probably be a deployment step.
+		// Currently this job will eagerly try to connect to the database during our service initialization.
+		// If that were to fail (e.g. because the database is not ready), then our tables would not be created,
+		// and all subsequent operations would fail.
 		val dbSetupJobNeedsDbLayer = setupDatabaseIfNeeded
 		val dbSetup = dbSetupJobNeedsDbLayer.provideLayer(dbConnLayer).debug("RunBanquoHttpApp.dbSetup complete")
 
