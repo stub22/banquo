@@ -1,8 +1,9 @@
 package com.appstract.banquo.impl.roach
 
 import com.appstract.banquo.api.roach.DbConn
+import org.postgresql.ds.PGSimpleDataSource
 import org.postgresql.ds.common.BaseDataSource
-import zio.{Scope, ZIO, ZLayer}
+import zio.{Scope, Task, ZIO, ZLayer}
 
 import java.sql.{PreparedStatement, ResultSet, ResultSetMetaData, Connection => SQL_Conn}
 import javax.sql.DataSource
@@ -15,6 +16,7 @@ trait RoachDbConnOps {
 	def openConn(dsrc: => DataSource) : ZIO[Any, Throwable, DbConn] = {
 		ZIO.attemptBlocking {
 			val dsinfo = describeDataSource(dsrc)
+			println(s"Attempting connection with datasource: ${dsinfo}")
 			val conn = dsrc.getConnection
 			conn.setAutoCommit(false)
 			val dbc = new RoachDbConnImpl(conn)
@@ -35,6 +37,9 @@ trait RoachDbConnOps {
 	def scopedConn(dsrc: => DataSource): ZIO[Scope, Throwable, DbConn] = {
 		ZIO.acquireRelease (openConn(dsrc)) (closeAndLogErrors(_))
 	}
+	def scopedConnFromDsrcEffect(dsTask : Task[DataSource]): ZIO[Scope, Throwable, DbConn] = {
+		dsTask.flatMap(dsrc => scopedConn(dsrc))
+	}
 
 	def describeDataSource(dsrc : DataSource) : String = {
 		dsrc match {
@@ -46,5 +51,16 @@ trait RoachDbConnOps {
 
 object RoachDbConnLayers {
 	val myConnOps = new RoachDbConnOps {}
-	val dbcLayer01: ZLayer[Any, Throwable, DbConn] = ZLayer.scoped(myConnOps.scopedConn(RoachDataSources.makePGDataSource))
+
+	lazy val dbcLayerDefault: ZLayer[Any, Throwable, DbConn]  = {
+		val dataSrc = RoachDataSources.makeDefaultPGDataSource
+		val scopedConn = myConnOps.scopedConn(dataSrc)
+		ZLayer.scoped(scopedConn)
+	}
+
+	lazy val dbcLayerConfigured: ZLayer[Any, Throwable, DbConn] = {
+		val pgSrcEff: Task[PGSimpleDataSource] = RoachDataSources.makeConfiguredPGDataSourceEffect
+		val scopedConn = myConnOps.scopedConnFromDsrcEffect(pgSrcEff)
+		ZLayer.scoped(scopedConn)
+	}
 }

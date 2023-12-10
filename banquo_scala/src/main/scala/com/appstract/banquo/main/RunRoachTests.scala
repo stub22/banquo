@@ -24,7 +24,7 @@ object RunRoachTests extends ZIOAppDefault {
 
 	override def run: Task[Any] = {
 
-		val testDbLayer: ZLayer[Any, Throwable, DbConn] = RoachDbConnLayers.dbcLayer01
+		val testDbLayer: ZLayer[Any, Throwable, DbConn] = RoachDbConnLayers.dbcLayerDefault
 
 		val tableCreateJob = setupSchema.debug("Banquo SQL schema setup is done, including DB commit")
 
