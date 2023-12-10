@@ -19,6 +19,9 @@ services:
     build:
       context: .
     image: appstract/banquo_scala:0.1.04
+    depends_on:
+      - roachsvc
+      # There is no healthcheck setup on Cockroach image, so we can't yet do:   condition: service_healthy
     networks:
       - banqnet
     ports:
