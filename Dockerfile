@@ -6,7 +6,8 @@ RUN mkdir /opt/japp
 COPY banquo_scala/ /opt/japp/banquo
 WORKDIR /opt/japp/banquo
 
-# USER sbtuser
+# Document the hardcoded port that banquo service listens on. 
+EXPOSE 8484
 
+# USER sbtuser
 CMD ["sbt", "clean", "run"]
-# CMD ["ls","-R", "/opt/japp"]

@@ -71,11 +71,76 @@ Build scala code with
 
 ```sbt clean compile```
 
-To launch the Banquo HTTP service on port 8484
+To launch the Banquo HTTP service on port 8484.  
+
 
 ```sbt run```
 
 Tested with:  OpenJDK 11.0.19 (GraalVM) on Microsoft Windows 10
 
+### Database Connection Config
+
+When present, these environment variables configure the Banquo JDBC connection
+
+`ROACH_HOST`  defaults to localhost
+
+`ROACH_PORT`  defaults to 26257
+
 ### Container Build and Launch
-Docker setup is not done yet.
+
+Docker compose is configured to build and launch two containers:  One for Banquo, and one for an in-memory Cockroach DB instance.  
+
+Start and stop this combined container setup using:
+
+`docker compose up`  
+
+and
+
+`docker compose down`
+
+Three services will be exposed to the host machine and its network:
+
+ 1. Banquo service at http://localhost:8499/
+ 2. Cockroach web console at http://localhost:8199/
+ 3. Cockroach DB SQL access on localhost port `26299`
+     * Access using Cockroach SQL client
+       * https://www.cockroachlabs.com/docs/stable/cockroach-sql 
+     * On Microsoft Windows, connect to the containerized service with
+       * `cockroach.exe sql --insecure --port=26299`
+
+### Creating Test Accounts
+
+A Dummy account may be created using HTTP POST to the running service at path `/make-dummy-account`.
+
+The intial balance of the account will be a random amount.
+```
+curl.exe -s -X POST http://localhost:8499/make-dummy-account
+{"accountID":"a464e29f-d98f-482d-9d3b-08df36cc3653","customerName":"dummy_1702212638165","customerAddress":"dummy_1702212638165","balanceAmt":244.11}
+
+curl.exe -s -X POST http://localhost:8499/make-dummy-account
+{"accountID":"02733529-aaff-422f-a5c8-d22126191f17","customerName":"dummy_1702212641608","customerAddress":"dummy_1702212641608","balanceAmt":522.50}
+```
+
+### Creating Transactions
+```
+ curl.exe -d '{"account_id" : "02733529-aaff-422f-a5c8-d22126191f17", "amount" : "4522.77", "description": "Net Pay Deposit" }' -X POST http://localhost:8499/transaction
+
+{"acctID":"02733529-aaff-422f-a5c8-d22126191f17","changeAmt":4522.77,"balanceAmt":5045.27 createTimestampTxt":"2023-12-10 13:14:32.894762","xactDescription_opt":"Net Pay Deposit"}
+```
+
+### Fetching Account Summary
+```
+ curl.exe -s http://localhost:8499/account/02733529-aaff-422f-a5c8-d22126191f17
+
+{"accountID":"02733529-aaff-422f-a5c8-d22126191f17","customerName":"dummy_1702212641608" "customerAddress":"dummy_1702212641608","balanceAmt":5045.27
+```
+
+
+### Fetching Account Transaction History
+Accessomg this same URL in a web browser to get a more readably formatted result.
+```
+curl.exe -s http://localhost:8499/transaction/history/02733529-aaff-422f-a5c8-d22126191f17
+
+[{"acctID":"02733529-aaff-422f-a5c8-d22126191f17","changeAmt":4522.77,"balanceAmt":5045.27,"createTimestampTxt":"2023-12-10 13:14:32.894762","xactDescription_opt":"Net Pay Deposit"},{"acctID":"02733529-aaff-422f-a5c8-d22126191f17","changeAmt":522.50,"balanceAmt":522.50,"createTimestampTxt":"2023-12-10 12:50:41.609989","xactDescription_opt":"INITIAL ACCOUNT BALANCE"}]
+```
+

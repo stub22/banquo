@@ -5,21 +5,28 @@ services:
     # Both the container_name (roachcont) and the service name (roachsvc) should be available as hostnames in banqnet DNS.
     container_name: roachcont
     ports:
+      # Expose the Cockroach DB server to the host at port 26299.
+      # We may connect an SQL client running on the host.  For example, using MS Windows:
+      # .\cockroach.exe sql --insecure --port=26299
       - "26299:26257"
+      # Expose the Cockroach web console to the host at port 8199.
       - "8199:8080"
     networks:
       - banqnet
     # Launch a single-node in-memory database with capacity 4GB, with no security  
     command: start-single-node --insecure --store=type=mem,size=4GB
-    # We may connect an SQL client running on the host using (on MS Windows)
-    # .\cockroach.exe sql --insecure --port=26299
   banqsvc:
     build:
       context: .
     image: appstract/banquo_scala:0.1.03
     networks:
       - banqnet
+    ports:
+    # Expose the Banquo HTTP service to the host at port 8499.
+      - "8499:8484"
     environment:
+      # These environment variables are read by the Banquo Scala service.
+      # Their values should match the roachsvc configuration above.
       ROACH_HOST:  "roachcont"
       ROACH_PORT:  "26257" 
 networks:
