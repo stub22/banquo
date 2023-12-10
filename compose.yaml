@@ -1,0 +1,27 @@
+version: '3.5'
+services:
+  roachsvc:
+    image: cockroachdb/cockroach:v22.2.17
+    # Both the container_name (roachcont) and the service name (roachsvc) should be available as hostnames in banqnet DNS.
+    container_name: roachcont
+    ports:
+      - "26299:26257"
+      - "8199:8080"
+    networks:
+      - banqnet
+    # Launch a single-node in-memory database with capacity 4GB, with no security  
+    command: start-single-node --insecure --store=type=mem,size=4GB
+    # We may connect an SQL client running on the host using (on MS Windows)
+    # .\cockroach.exe sql --insecure --port=26299
+  banqsvc:
+    build:
+      context: .
+    image: appstract/banquo_scala:0.1.03
+    networks:
+      - banqnet
+    environment:
+      ROACH_HOST:  "roachcont"
+      ROACH_PORT:  "26257" 
+networks:
+  banqnet:
+    driver: bridge
