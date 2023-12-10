@@ -12,12 +12,15 @@ object RunBanquoHttpApp extends ZIOAppDefault {
 	// TODO:  Read our HTTP port number from .env
 	val SERVER_PORT_NUM: Int = 8484
 
+	val flg_useConfiguredConn = true
+
 	override def run: Task[Any] = {
 		val writeOps = new BankAccountWriteOpsImpl
 		val readOps = new BankAccountReadOpsImpl
 
-		// TODO: Read Roach-DB connection info from .env
-		val dbConnLayer = RoachDbConnLayers.dbcLayer01
+		val dbConnLayer = if (flg_useConfiguredConn)
+			RoachDbConnLayers.dbcLayerConfigured
+		else RoachDbConnLayers.dbcLayerDefault
 
 		// Each HTTP request handler should acquire a fresh JDBC connection from the dbConnLayer.
 		val httpAppBuilder = new BanquoHttpAppBuilder(writeOps, readOps, dbConnLayer)

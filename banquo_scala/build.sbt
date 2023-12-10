@@ -15,6 +15,3 @@ libraryDependencies ++= Seq(
   "org.postgresql" % "postgresql"       % postgresJdbcVersion,
   "ch.qos.logback" % "logback-classic"  % logbackVersion
 )
-
-enablePlugins(JavaAppPackaging)
-enablePlugins(DockerPlugin)
