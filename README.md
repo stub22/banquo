@@ -4,18 +4,18 @@ Banquo is a prototype implementation of a bank account ledger service with the p
 
 The design relies on the scalable strong consistency features of Cockroach DB, which is protocol compatible with Postgresql.  
 
-The Banquo HTTP service is implemented in Functional Scala (v. 2.13) using the following main libraries:
-  * ZIO 2.x
-  * ZIO-HTTP
-  * Postgres JDBC driver
+The Banquo HTTP service is implemented in Functional Scala (v. 2.13) using the following Scala libraries:
+  * ZIO v2.0.19
+  * ZIO-HTTP v3.0.0-RC2
+  * Postgres JDBC driver v42.2.18
 
-Banquo is designed to be run as a set of parallel stateless service instances, deployed and managed by  Kubernetes.  As of 2023-12-06, Banquo has been tested using only a single service instance, using a single-server instance of the free desktop edition of CockroachDB core version 23.1.12.
+Banquo is designed to be run as a set of parallel stateless service instances, deployed and managed by Kubernetes. As of 2023-12-06, Banquo has been tested using only a single service instance, accompanied by a single-node cluster of the open souce CockroachDB core version 22.2.17.
 
-CockroachDB may be deployed as a scalable, distributed database under Kubernetes (commercial license required), and is also offered as a commercial cloud-hosted service.
+CockroachDB may be deployed as a scalable, distributed database under Kubernetes (commercial license may required), and is also offered as a commercial cloud-hosted service.
 
 ### Persistent Store Design 
 
-The core functionality of Banquo is implemented by the SQL table called `balance_change`.
+The core functionality of Banquo is implemented by an SQL table called `balance_change`.
 
 This table functions like an append-only log, and in principle could be replaced with some other kind of append-log data storage.  We make use of CockroachDB integrity and concurrency features to ensure that this table serves our purposes, architecturally. The full impact of these features is only clear when we consider heavy workloads in a disributed deployment. This design would need careful review before another SQL database was used in place of CockroachDB.
 
