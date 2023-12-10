@@ -89,7 +89,7 @@ When present, these environment variables configure the Banquo JDBC connection
 
 Docker compose is configured to assemple and launch two containers:  One for Banquo, and one for an in-memory Cockroach DB instance. 
 
-Best practice is to build+pull the images first, using:
+Best practice is to build + pull the images first, using:
 
   * `docker compose pull`
     * This will pull the Cockroach DB image.  You can ignore any errors about the Banquo image.
@@ -97,11 +97,11 @@ Best practice is to build+pull the images first, using:
   * `docker compose build`
     * This will build the Banquo Scala image.
 
-Then you can start and stop the combined container setup using:
+Then you can start the combined container setup using:
 
 `docker compose up`  
 
-and, from another window
+To stop the containers, from another window use the command:
 
 `docker compose down`
 
@@ -117,9 +117,9 @@ While the containers are running, three services will be exposed to the host mac
 
 ### Creating Test Accounts
 
-A Dummy account may be created using HTTP POST to the running service at path `/make-dummy-account`.
+Dummy accounts may be created, one at a time, using HTTP POST to the running service at path `/make-dummy-account`.
 
-The intial balance of the account will be a random amount.
+The intial balance of the account will be a random amount.  The name and address will be timestamped Strings.
 ```
 curl.exe -s -X POST http://localhost:8499/make-dummy-account
 {"accountID":"a464e29f-d98f-482d-9d3b-08df36cc3653","customerName":"dummy_1702212638165","customerAddress":"dummy_1702212638165","balanceAmt":244.11}
@@ -143,7 +143,7 @@ curl.exe -s -X POST http://localhost:8499/make-dummy-account
 ```
 
 ### Fetching Account Transaction History
-Accessomg this same URL in a web browser to get a more readably formatted result.
+Access this same URL in a web browser to get a more readably formatted result.
 ```
 curl.exe -s http://localhost:8499/transaction/history/02733529-aaff-422f-a5c8-d22126191f17
 
