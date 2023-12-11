@@ -4,23 +4,22 @@ import org.postgresql.ds.PGSimpleDataSource
 import zio.{Task, ZIO}
 
 /**
+ * We use the PGSimpleDataSource, which does not provide any connection pooling.
+ *
  * https://jdbc.postgresql.org/documentation/datasource/
  *
  * org.postgresql.ds.PGSimpleDataSource  - no connection pooling
  * org.postgresql.ds.PGPoolingDataSource - basic pooling; has limits and flaws as discussed in doc linked above.
+ ***************************************************************************************
+ * The default ports used by Cockroach DB are: 26257 for the DB, 8080 for the built in web console.
+ * We use these default ports when testing Cockroach DB on the bare host OS (i.e. without Docker).
+ *
+ * When we launch Cockroach DB in a Docker container, we have set it to expose ports
+ * 26299 and 8199 to the host OS. It is possible to connect to that instance from
+ * the host network, or from another container in the bridge network.  See compose.yaml.
  */
 
 object RoachDataSources {
-	// The default ports used by Cockroach DB are
-	// 26257 for the DB
-	// 8080 for the built in web console
-	// We use these default ports when testing Cockroach DB on the bare host OS (i.e. without Docker).
-
-	// When we launch Cockroach DB in a Docker container, we have set it to expose ports
-	// 26299 and 8199 to the host OS.  It is possible to connect to that instance from
-	// the host network (using these -99 port numbers), or from the bridge network (using default port
-	// numbers or whatever is configured).  See compose.yaml.
-
 
 	val flag_useSSL = false
 
@@ -29,6 +28,8 @@ object RoachDataSources {
 
 	val appName = "BanquoRoachTrial"
 
+	/** Uses only hardcoded default parameters for DB connection.
+	 */
 	def makeDefaultPGDataSource : PGSimpleDataSource = {
 		// localhost is the default used by PGSimpleDataSource.
 		val hostName_UNUSED = "localhost"
@@ -47,6 +48,9 @@ object RoachDataSources {
 
 		pgds
 	}
+
+	/** Reads environment variables to get parameters for DB connection.
+	 */
 	def  makeConfiguredPGDataSourceEffect : Task[PGSimpleDataSource] = {
 		val myRoachEnv = new RoachEnvironment {}
 		for {

@@ -21,11 +21,13 @@ object RoachSchema {
 
 	// prev_bchg_id should be NULL when bal_chg_flavor is INITIAL.
 	// UNIQUE constraint on prev_bchg_id should prevent forking by simultaneous transactions on the same account.
-	// (We expect one of the transactions to fail. This failure should actually happen even without the UNIQUE
-	// constraint, assuming Cockroach SERIALIZABLE fails on phantom reads).
+	// (We expect one of those simultaneous transactions to fail. Such a failure should happen even without this
+	// UNIQUE constraint, assuming Cockroach SERIALIZABLE fails on phantom reads).
 	// These INT8 values are 64 bits, so we bind them to Java/Scala Long.
+	// TODO: Make a test that shows simultaneous transactions failure.
 	// TODO: Consider additional indexes to improve read performance, with some tradeoff in storage cost and write performance.
 	// TODO: Consider Foreign-key constraint on link to account.
+	// TODO: Consider adding an acct_xact_seq column that would increment for each transaction on the account.
 
 	val CREATE_TABLE_BALANCE_CHG =
 		"""CREATE TABLE IF NOT EXISTS balance_change (

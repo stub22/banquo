@@ -3,9 +3,10 @@ package com.appstract.banquo.api.roach
 import com.appstract.banquo.api.bank.BalanceChangeSummary
 import com.appstract.banquo.api.bank.BankScalarTypes._
 
-/**
- * Internal query result types, not exposed to HTTP svc.
- */
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Internal query result types from the .roach layer.  These are not exposed to the banquo HTTP svc.
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 case class AccountDetails(accountID: AccountID, customerName: CustomerName, customerAddress: CustomerAddress,
 						  createTimestamp: DbTimestamp)

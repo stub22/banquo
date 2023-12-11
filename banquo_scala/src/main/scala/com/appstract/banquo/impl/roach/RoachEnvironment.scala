@@ -2,6 +2,9 @@ package com.appstract.banquo.impl.roach
 
 import zio.{IO, System, UIO, ZIO}
 
+/** Accesses environment variables used to configure a JDBC connection.
+ */
+
 trait RoachEnvironment {
 	val ROACH_HOST_ENV_NAME = "ROACH_HOST"
 	val FALLBACK_HOST = "localhost"
