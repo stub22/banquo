@@ -17,7 +17,7 @@ CockroachDB may be deployed as a scalable, distributed database under Kubernetes
 
 The core functionality of Banquo is implemented by an SQL table called `balance_change`.
 
-This table functions like an append-only log, and in principle could be replaced with some other kind of append-log data storage.  We make use of CockroachDB integrity and concurrency features to ensure that this table serves our purposes, architecturally. The full impact of these features is only clear when we consider heavy workloads in a disributed deployment. This design would need careful review before another SQL database was used in place of CockroachDB.
+This table functions like an append-only log, and in principle could be replaced with some other kind of append-log data storage.  We make use of CockroachDB integrity and concurrency features to ensure that this table is always in a consistent state. The full impact of these features is only clear when we consider heavy workloads in a disributed deployment. This design would need careful review before another SQL database was used in place of CockroachDB.
 
   * The current Banquo implementation never mutates any rows of the `balance_change` table.
   * Our Scala code accesses the JDBC driver directly, which ensures we have complete control over both DB connections and SQL Transactions.
@@ -28,7 +28,7 @@ The column schema is as follows.
 Notice that bchg_id is automatically generated as a mostly-increasing integer.
 
 ```
-	column_name   |            data_type            | is_nullable | column_default | 
+  column_name     |            data_type            | is_nullable | column_default | 
 ------------------+---------------------------------+-------------+----------------+
   bchg_id         | INT8                            |      f      | unique_rowid() | 
   acct_id         | UUID                            |      f      | NULL           | 
@@ -43,7 +43,7 @@ Notice that bchg_id is automatically generated as a mostly-increasing integer.
 The table has the following constraints 
 ```
     table_name   | constraint_type |          details          | validated
------------------+---------------------------------+-----------------+--------
+-----------------+-----------------+---------------------------+--------
   balance_change | PRIMARY KEY     | PRIMARY KEY (bchg_id ASC) |     t
   balance_change | UNIQUE          | UNIQUE (prev_bchg_id ASC) |     t
 ```
@@ -62,9 +62,12 @@ only be used **once** as a previous balance.  This constraint ensures that we wi
 chain of BalanceChange records for each account. 
 
 This constraint comes with its own storage and write-performance costs (the cost of checking and storing  the UNIQUE index on prev_bchg_id).  Given the serializable transaction model of Cockroach DB, this
-index-based approach may not be strictly necessary.  (We could possibly prevent account balances from 
+index-based approach may not be strictly necessary. (For example, we could possibly prevent account balances from 
 forking using only phantom-read isolation between competing transactions).  However it is an explicit 
 and understandable mechanism that delivers the functionality we need for the Banquo prototype.
+
+One improvement we are considering is the addition of a column for transaction sequence number for each account.
+This would help us more easily query the account transactions in order.
 
 ### Building and Testing Scala Code
 Build scala code with
