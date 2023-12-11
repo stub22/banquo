@@ -89,9 +89,10 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		// 200 OK: Returns the list of transaction history for the specified bank account in JSON format.
 		// 404 Not Found: If the account does not exist.
 
-		// TODO: AccountHistory should be some kind of paged result set, or stream.
-		// But our initial implementation is to eagerly, naively fetch a single chunk of account transaction history
+		// Here our initial implementation is to eagerly, naively fetch a single chunk of account transaction history
 		// into one sequence in memory, then serialize that into a Json value in memory, which is used to build the response.
+		// TODO: AccountHistory should be some kind of paged result set, or stream.
+
 		val OP_NAME = "handleGetTransactionHistory"
 
 		val acctHistJob: URIO[DbConn, AcctOpResult[AccountHistory]] = accountReadOps.fetchAccountHistory(acctId)
@@ -116,7 +117,6 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 				Response.text(other.toString).withStatus(Status.InternalServerError)
 			}
 		})
-		// When we apply the dbLayer, we now have a job that might fail in the case where
 		responseJob.debug(s"${OP_NAME} Response: ")
 
 	}
@@ -125,9 +125,6 @@ class BanquoHttpAppBuilder(accountWriteOps: => BankAccountWriteOps, accountReadO
 		// 400 Bad Request: If the request body is invalid
 		// 404 Not Found: If the account does not exist
 		// 422 Unprocessable Entity: If the transaction fails due to insufficient funds or other reasons.
-
-		// TODO:  On success we are meant to return "the transaction details".
-		// Perhaps these should include the new balance, and the transaction timestamp.
 
 		val OP_NAME = "handlePostTransaction"
 		val rb: Body = request.body
