@@ -94,11 +94,9 @@ Docker compose is configured to assemple and launch two containers:  One for Ban
 
 Best practice is to build + pull the images first, using:
 
-  * `docker compose pull`
-    * This will pull the Cockroach DB image.  You can ignore any errors about the Banquo image.
-
-  * `docker compose build`
-    * This will build the Banquo Scala image.
+  * `docker compose create`
+    * This will pull the Cockroach DB image, build the Banquo Scala image, and create containers for both.
+    * You can now inspect the container images using docker tools.
 
 Then you can start the combined container setup using:
 
