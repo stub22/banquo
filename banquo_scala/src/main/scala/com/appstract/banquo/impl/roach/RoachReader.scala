@@ -39,6 +39,9 @@ trait RoachReader {
 	 * 2) Select the row with the highest chg_create_time timestamp.
 	 * 3) Select the row with a bchg_id which is not currently used by any other row as a prev_bchg_id.
 	 *
+	 * 4)th way proposed but not yet implemented:  add explicit sequence number to each account's transactions.
+	 * This number becomes a natural sort key for reporting.
+	 *
 	 * In most cases, all of these approaches will find the same row.
 	 * Approach #3 intuitively seems to be the most bulletproof.
 	 * However in our prototype implementation we have decided to initially use Approach #1, implicitly, by
@@ -54,11 +57,18 @@ trait RoachReader {
 
 /***
  * TODO: This transaction history report should eventually be some kind of paged result set, or stream.
+ *
  * Our initial implementation returns only the last maxRecordCount records, with the most recent record first.
+ *
  * This impl relies on ordering by the bchg_id, which is assigned by CockroachDB using unique_rowid().
- * TODO: Investigate the conditions under which these records could possibly be out of order.
- * It may be that our balance-fork preventing mechanism is sufficient to prevent balance change records for the
- * same account appearing with out-of-order IDs.
+ * Note that unique_rowid() is recommended by Cockroach to handle this general kind of use case, see deets below.
+ * This ordering could be made more explicit and convenient using acct_bchg_seqnum column mentioned below, at
+ * some cost in storage and performance. If we DON'T WANT that extra column and index, then we will need to do
+ * some additional analysis of exactly how our records are being stored and queried.
+ *
+ * TODO: Consider adding another column to balance_change:  acct_bchg_seqnum
+ * together with a compound index on (acct_id, acct_bchg_seqnum), starting at 0 for an initial account deposit,
+ * AND a uniqueness constraint on that same tuple: (acct_id, acct_bchg_seqnum).
  *
  * https://www.cockroachlabs.com/docs/v23.1/sql-faqs#how-do-i-auto-generate-unique-row-ids-in-cockroachdb
  * "Upon insert or upsert, the unique_rowid() function generates a default value from the timestamp and ID of the
